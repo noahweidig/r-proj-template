@@ -187,7 +187,7 @@ a:hover { text-decoration: underline; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
 
-input[type="text"], input[type="number"], select {
+input[type="text"], input[type="number"], input[type="email"], select {
   width: 100%; padding: 11px 13px; font-family: inherit; font-size: .98rem;
   color: var(--text); background: var(--bg-2);
   border: 1px solid var(--border-2); border-radius: var(--radius-sm);
