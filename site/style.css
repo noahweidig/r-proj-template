@@ -151,11 +151,12 @@ a:hover { text-decoration: underline; }
 /* ── builder layout ──────────────────────────────────────── */
 .builder { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 40px); }
 .builder-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 26px; align-items: start; }
-@media (max-width: 920px) { .builder-grid { grid-template-columns: 1fr; } }
+@media (max-width: 920px) { .builder-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .panel {
   background: var(--panel); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
+  min-width: 0;
 }
 .panel-title { margin: 0; padding: 18px 22px; font-size: .95rem; letter-spacing: .02em; text-transform: uppercase; color: var(--text-2); border-bottom: 1px solid var(--border); font-weight: 600; }
 
