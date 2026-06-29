@@ -1027,12 +1027,44 @@ function initTheme() {
   });
 }
 
+/* ── mobile nav ──────────────────────────────────────────────────────── */
+function initNav() {
+  const toggle  = $("#navToggle");
+  const nav     = $("#topnav");
+  const overlay = $("#navOverlay");
+  if (!toggle || !nav) return;
+
+  const open = () => {
+    nav.classList.add("is-open");
+    toggle.classList.add("is-open");
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "Close menu");
+    overlay.hidden = false;
+  };
+  const close = () => {
+    nav.classList.remove("is-open");
+    toggle.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Open menu");
+    overlay.hidden = true;
+  };
+  const toggleMenu = () =>
+    nav.classList.contains("is-open") ? close() : open();
+
+  toggle.addEventListener("click", toggleMenu);
+  overlay.addEventListener("click", close);
+  // close after tapping a link (theme toggle keeps the menu open)
+  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", close));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
 /* ── boot ────────────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
   renderPackages();
   initTabs();
   initCopy();
   initTheme();
+  initNav();
 
   $("#spatial").addEventListener("change", () => { syncSpatialPackages(); refreshPreview(); });
   $("#cfgForm").addEventListener("input", refreshPreview);
