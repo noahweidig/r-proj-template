@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>R Project Scaffolder — reproducible R projects in one click</title>
+  <meta name="description" content="Name and configure a reproducible R project, then download a ready-to-extract zip. Best-practice structure, renv, Quarto, Makefile, and a tidy pipeline." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E" />
+
+  <!-- zip generation, all client-side, vendored (no external requests) -->
+  <script src="vendor/jszip.min.js" defer></script>
+  <script src="vendor/FileSaver.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📦</span>
+      <span class="brand-name">R Project <strong>Scaffolder</strong></span>
+    </div>
+    <nav class="topnav">
+      <a href="#builder">Builder</a>
+      <a href="#workflow">Workflow</a>
+      <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">GitHub ↗</a>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle light / dark">🌙</button>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+      <span class="eyebrow">Reproducible by default</span>
+      <h1>Spin up a clean R project<br /><span class="grad">in one click.</span></h1>
+      <p class="lede">
+        Name it, configure it, download it. You get a best-practice project skeleton —
+        numbered pipeline, <code>config.R</code>, <code>renv</code>, Quarto report, and a Makefile —
+        zipped and ready to extract. No setup script to run.
+      </p>
+      <div class="hero-cta">
+        <a href="#builder" class="btn btn-primary btn-lg">Build my project →</a>
+        <a href="#workflow" class="btn btn-ghost btn-lg">See what's inside</a>
+      </div>
+      <div class="hero-badges">
+        <span>✓ 100% in your browser</span>
+        <span>✓ Nothing uploaded</span>
+        <span>✓ Tidyverse + sf ready</span>
+      </div>
+    </div>
+  </section>
+
+  <main id="builder" class="builder">
+    <div class="builder-grid">
+      <!-- ── form ─────────────────────────────────────────── -->
+      <form id="cfgForm" class="panel form-panel" autocomplete="off">
+        <h2 class="panel-title">1 · Configure</h2>
+
+        <fieldset class="fs">
+          <legend>Identity</legend>
+          <label class="field">
+            <span>Project name <em>*</em></span>
+            <input id="projName" type="text" placeholder="my-spatial-analysis" required />
+            <small id="projSlugHint" class="hint">Folder will be named <code id="slugEcho">my-spatial-analysis</code></small>
+          </label>
+          <label class="field">
+            <span>Author <em>*</em></span>
+            <input id="author" type="text" placeholder="Jane Researcher" required />
+          </label>
+          <label class="field">
+            <span>Description</span>
+            <input id="description" type="text" placeholder="Short one-line summary of the project" />
+          </label>
+        </fieldset>
+
+        <fieldset class="fs">
+          <legend>Type &amp; packages</legend>
+          <label class="toggle">
+            <input id="spatial" type="checkbox" checked />
+            <span class="switch"></span>
+            <span class="toggle-label">Spatial project <small>adds <code>sf</code> / <code>terra</code> + CRS config</small></span>
+          </label>
+
+          <div class="field pkg-field">
+            <span>Core packages</span>
+            <div id="pkgGrid" class="pkg-grid"></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="fs" id="crsFs">
+          <legend>Coordinate systems</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Projected CRS (EPSG)</span>
+              <input id="crsProj" type="text" value="5070" />
+              <small class="hint">5070 = Albers Equal-Area, CONUS</small>
+            </label>
+            <label class="field">
+              <span>Geographic CRS (EPSG)</span>
+              <input id="crsGeo" type="text" value="4326" />
+              <small class="hint">4326 = WGS 84</small>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="fs">
+          <legend>Reproducibility &amp; tooling</legend>
+          <div class="field-row">
+            <label class="field">
+              <span>Random seed</span>
+              <input id="seed" type="number" value="42" />
+            </label>
+            <label class="field">
+              <span>License</span>
+              <select id="license">
+                <option value="MIT">MIT</option>
+                <option value="Apache-2.0">Apache-2.0</option>
+                <option value="GPL-3.0">GPL-3.0</option>
+                <option value="CC-BY-4.0">CC-BY-4.0</option>
+                <option value="none">None</option>
+              </select>
+            </label>
+          </div>
+          <div class="chk-grid">
+            <label class="toggle compact">
+              <input id="useRenv" type="checkbox" checked />
+              <span class="switch"></span>
+              <span class="toggle-label">renv <small>pinned package versions</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useQuarto" type="checkbox" checked />
+              <span class="switch"></span>
+              <span class="toggle-label">Quarto report <small>05_report_data.qmd</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useMakefile" type="checkbox" checked />
+              <span class="switch"></span>
+              <span class="toggle-label">Makefile <small>run the pipeline with <code>make</code></small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useGithub" type="checkbox" checked />
+              <span class="switch"></span>
+              <span class="toggle-label">Git + CI <small>.gitignore + GitHub Action</small></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button id="downloadBtn" type="button" class="btn btn-primary btn-lg btn-block">
+            <span class="btn-icon">⬇</span> Download <span id="dlName">project</span>.zip
+          </button>
+          <p id="formError" class="form-error" role="alert"></p>
+        </div>
+      </form>
+
+      <!-- ── preview ──────────────────────────────────────── -->
+      <section class="panel preview-panel">
+        <h2 class="panel-title">2 · Preview</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab is-active" data-tab="tree" role="tab">📁 Files</button>
+          <button class="tab" data-tab="config" role="tab">⚙️ config.R</button>
+          <button class="tab" data-tab="readme" role="tab">📖 README.md</button>
+          <button class="tab" data-tab="script" role="tab">🧪 02_clean_data.R</button>
+        </div>
+        <div class="tabpane is-active" data-pane="tree">
+          <pre id="treeView" class="codeblock tree"></pre>
+        </div>
+        <div class="tabpane" data-pane="config">
+          <pre id="configView" class="codeblock"></pre>
+        </div>
+        <div class="tabpane" data-pane="readme">
+          <pre id="readmeView" class="codeblock"></pre>
+        </div>
+        <div class="tabpane" data-pane="script">
+          <pre id="scriptView" class="codeblock"></pre>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <section id="workflow" class="workflow">
+    <h2 class="section-title">A pipeline you can actually reproduce</h2>
+    <p class="section-sub">Every project follows the same numbered flow — raw → clean → model → visualize → report.</p>
+    <div class="flow">
+      <div class="flow-step"><span class="flow-n">01</span><h3>Download</h3><p>Pull raw data into <code>01_data/raw_data/</code> — never edited by hand.</p></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="flow-n">02</span><h3>Clean</h3><p>Transform &amp; tidy into <code>01_data/clean_data/</code>.</p></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="flow-n">03</span><h3>Model</h3><p>Analyse; save results to <code>03_outputs/tables/</code>.</p></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="flow-n">04</span><h3>Visualize</h3><p>Maps &amp; figures to <code>03_outputs/figures/</code>.</p></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="flow-n">05</span><h3>Report</h3><p>One Quarto doc ties it all together.</p></div>
+    </div>
+
+    <div class="features">
+      <div class="feature"><span class="feat-ic">🧭</span><h3>here::here() paths</h3><p>Robust relative paths that work no matter where a script is run from.</p></div>
+      <div class="feature"><span class="feat-ic">🔒</span><h3>renv lockfile</h3><p>Pin every package version so collaborators get the exact same environment.</p></div>
+      <div class="feature"><span class="feat-ic">🎲</span><h3>Seeded</h3><p><code>set.seed()</code> wired into config so stochastic steps are deterministic.</p></div>
+      <div class="feature"><span class="feat-ic">🛠️</span><h3>Makefile</h3><p><code>make all</code> runs the whole pipeline end-to-end in order.</p></div>
+    </div>
+
+    <div class="next-card">
+      <h3>After you download</h3>
+      <ol>
+        <li>Unzip into your projects folder.</li>
+        <li>Open <code><span class="nx-slug">project</span>.Rproj</code> in RStudio.</li>
+        <li id="renvStep">Run <code>renv::restore()</code> to install pinned packages.</li>
+        <li>Start with <code>02_scripts/01_download_data.R</code> and work down the numbers.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Built for reproducible research. Everything runs locally in your browser — your inputs never leave this page.</p>
+    <p class="muted">Template: <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">noahweidig/r-proj-template</a></p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
