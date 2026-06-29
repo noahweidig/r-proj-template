@@ -81,6 +81,28 @@ a:hover { text-decoration: underline; }
 }
 .theme-toggle:hover { border-color: var(--border-2); }
 
+/* hamburger toggle — hidden on desktop */
+.nav-toggle {
+  display: none;
+  flex-direction: column; justify-content: center; gap: 5px;
+  width: 42px; height: 42px; padding: 0;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer;
+}
+.nav-toggle-bar {
+  display: block; width: 20px; height: 2px; margin: 0 auto;
+  background: var(--text); border-radius: 2px;
+  transition: transform .25s ease, opacity .2s ease;
+}
+.nav-toggle.is-open .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; }
+.nav-toggle.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.nav-overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
+}
+
 /* ── hero ────────────────────────────────────────────────── */
 .hero { position: relative; overflow: hidden; padding: clamp(48px, 9vw, 110px) 24px clamp(40px, 6vw, 72px); text-align: center; }
 .hero-glow {
@@ -277,18 +299,68 @@ input::placeholder { color: var(--muted); }
   .preview-panel { position: static; }
   .codeblock { max-height: 420px; }
 }
-@media (max-width: 680px) {
-  .topnav { gap: 12px; }
-  .topnav a { font-size: .9rem; }
-  .hero-badges { gap: 12px; }
-  .builder-grid { gap: 18px; }
-  .fs { padding: 16px 16px 4px; }
-  .presets, .panel-title { padding-left: 16px; padding-right: 16px; }
-  .form-actions { padding: 8px 16px 18px; }
-  .codeblock { font-size: .76rem; padding: 14px 14px; }
+
+/* hamburger nav kicks in on tablet / phone */
+@media (max-width: 760px) {
+  .nav-toggle { display: flex; }
+
+  .topnav {
+    position: fixed; top: 0; right: 0; z-index: 45;
+    flex-direction: column; align-items: stretch; justify-content: flex-start;
+    gap: 6px;
+    width: min(82vw, 320px); height: 100dvh;
+    padding: 84px 22px 28px;
+    background: var(--bg-2);
+    border-left: 1px solid var(--border);
+    box-shadow: -20px 0 60px -20px rgba(0,0,0,.6);
+    transform: translateX(100%);
+    transition: transform .28s ease;
+    overflow-y: auto;
+  }
+  .topnav.is-open { transform: translateX(0); }
+
+  .topnav a {
+    font-size: 1.05rem; font-weight: 600;
+    padding: 14px 14px; border-radius: 12px;
+    color: var(--text);
+  }
+  .topnav a:hover { background: var(--panel-2); text-decoration: none; }
+  .theme-toggle {
+    margin-top: 10px; align-self: flex-start;
+    font-size: 1.05rem; padding: 12px 16px; width: 100%; text-align: left;
+  }
 }
+
+@media (max-width: 680px) {
+  .hero { padding-top: clamp(40px, 12vw, 72px); }
+  .hero-badges { gap: 10px 16px; font-size: .82rem; }
+  .hero-cta { gap: 10px; }
+  .hero-cta .btn-lg { width: 100%; }
+  .builder { padding-left: 0; padding-right: 0; }
+  .builder-grid { gap: 16px; }
+  .panel { border-radius: 0; border-left: none; border-right: none; }
+  .fs { padding: 16px 16px 4px; }
+  .presets, .panel-title, .preview-head { padding-left: 16px; padding-right: 16px; }
+  .copy-btn { margin-right: 0; }
+  .form-actions { padding: 8px 16px 18px; }
+  .tabs { padding-left: 12px; padding-right: 12px; }
+  .codeblock { font-size: .74rem; padding: 14px; max-height: 60vh; }
+  /* 16px inputs stop iOS Safari from auto-zooming on focus */
+  input[type="text"], input[type="number"], input[type="email"], select { font-size: 16px; }
+  .pkg-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .flow-step { max-width: none; }
+  .next-card { border-radius: 0; border-left: none; border-right: none; padding: 24px 18px; }
+}
+
 @media (max-width: 420px) {
   .brand-name { font-size: .95rem; }
-  .topnav a[href*="github"] { display: none; }
-  .preset { flex: 1 1 auto; text-align: center; }
+  .preset { flex: 1 1 calc(50% - 4px); text-align: center; }
+  .tab { font-size: .8rem; padding: 9px 9px; }
+  .action-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
+
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .topnav, .nav-toggle-bar, .btn { transition: none; }
+  html { scroll-behavior: auto; }
 }

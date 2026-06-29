@@ -23,12 +23,18 @@
       <span class="logo">📦</span>
       <span class="brand-name">R Project <strong>Scaffolder</strong></span>
     </div>
-    <nav class="topnav">
+    <button id="navToggle" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="topnav">
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+    </button>
+    <nav id="topnav" class="topnav">
       <a href="#builder">Builder</a>
       <a href="#workflow">Workflow</a>
       <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">GitHub ↗</a>
       <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle light / dark">🌙</button>
     </nav>
+    <div id="navOverlay" class="nav-overlay" hidden></div>
   </header>
 
   <section class="hero">
