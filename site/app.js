@@ -1236,7 +1236,13 @@ function initTheme() {
   const saved = localStorage.getItem("rps-theme");
   if (saved) root.dataset.theme = saved;
   const btn = $("#themeToggle");
-  const sync = () => (btn.textContent = root.dataset.theme === "light" ? "☀️" : "🌙");
+  // the sun/moon icons themselves are swapped purely in CSS off [data-theme];
+  // here we only keep the accessibility state in sync
+  const sync = () => {
+    const light = root.dataset.theme === "light";
+    btn.setAttribute("aria-pressed", String(light));
+    btn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
+  };
   sync();
   btn.addEventListener("click", () => {
     root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
@@ -1252,9 +1258,12 @@ function initNav() {
   const overlay = $("#navOverlay");
   if (!toggle || !nav) return;
 
-  const isOpen = () => nav.classList.contains("is-open");
+  let scrollY = 0;
+  const isOpen = () => document.body.classList.contains("nav-open");
 
   const open = () => {
+    if (isOpen()) return;
+    scrollY = window.scrollY;
     nav.classList.add("is-open");
     toggle.classList.add("is-open");
     toggle.setAttribute("aria-expanded", "true");
@@ -1262,34 +1271,73 @@ function initNav() {
     overlay.hidden = false;
     // next frame so the opacity transition runs
     requestAnimationFrame(() => overlay.classList.add("is-open"));
+    // lock the page in place (position:fixed needs the stored offset)
+    document.body.style.top = `-${scrollY}px`;
     document.body.classList.add("nav-open");
   };
-  const close = () => {
+
+  // close the drawer. restore=true puts the scroll position back (the page was
+  // pinned with position:fixed); pass false when an in-page anchor should drive
+  // the scroll instead so we don't fight it.
+  const close = (restore = true) => {
+    if (!isOpen()) return;
     nav.classList.remove("is-open");
     toggle.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open menu");
     overlay.classList.remove("is-open");
-    overlay.hidden = true;
     document.body.classList.remove("nav-open");
+    document.body.style.top = "";
+    if (restore) window.scrollTo(0, scrollY);
+    // hide the overlay only after it has faded out
+    const hide = () => { if (!isOpen()) overlay.hidden = true; };
+    overlay.addEventListener("transitionend", hide, { once: true });
+    setTimeout(hide, 360);
   };
+
   const toggleMenu = (e) => { e.stopPropagation(); isOpen() ? close() : open(); };
 
   toggle.addEventListener("click", toggleMenu);
-  overlay.addEventListener("click", close);
-  // close after tapping a link (theme toggle keeps the menu open)
-  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", close));
+  overlay.addEventListener("click", () => close());
+
+  // close after tapping a link. for same-page anchors, unlock first then drive
+  // the smooth scroll ourselves so the menu reliably collapses on selection.
+  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => {
+    const href = a.getAttribute("href") || "";
+    if (href.startsWith("#")) {
+      const target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        close(false);
+        history.pushState(null, "", href);
+        requestAnimationFrame(() =>
+          target.scrollIntoView({ behavior: "smooth", block: "start" }));
+        return;
+      }
+    }
+    close();
+  }));
+
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 
-  // belt-and-braces: any tap/click outside the drawer & toggle closes it
-  document.addEventListener("click", (e) => {
-    if (isOpen() && !nav.contains(e.target) && !toggle.contains(e.target)) close();
-  });
-
   // if the viewport grows back to desktop, reset to a clean state
-  window.matchMedia("(min-width: 761px)").addEventListener("change", (e) => {
-    if (e.matches) close();
-  });
+  const mq = window.matchMedia("(min-width: 761px)");
+  const onMq = (e) => { if (e.matches) close(); };
+  mq.addEventListener ? mq.addEventListener("change", onMq) : mq.addListener(onMq);
+
+  // scrollspy: highlight the nav link for whichever section is in view
+  const links = $$('#topnav a[href^="#"]');
+  const byId = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+  if (byId.size && "IntersectionObserver" in window) {
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        links.forEach((l) => l.classList.remove("is-active"));
+        byId.get(en.target.id)?.classList.add("is-active");
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0 });
+    byId.forEach((_, id) => { const el = document.getElementById(id); if (el) spy.observe(el); });
+  }
 }
 
 /* ── boot ────────────────────────────────────────────────────────────── */

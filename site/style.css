@@ -60,8 +60,9 @@ body {
 /* sticky header shouldn't hide anchored sections when jumped to */
 #builder, #workflow { scroll-margin-top: 80px; }
 
-/* lock background scroll while the mobile drawer is open */
-body.nav-open { overflow: hidden; }
+/* lock background scroll while the mobile drawer is open (position:fixed +
+   stored top keeps the page exactly where it was — no jump, no rubber-banding) */
+body.nav-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hidden; }
 
 code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
@@ -87,14 +88,42 @@ a:hover { text-decoration: underline; }
 .brand-name { letter-spacing: -.01em; }
 .brand-name strong { color: var(--brand); }
 .topnav { display: flex; align-items: center; gap: clamp(12px, 2vw, 26px); }
-.topnav a { color: var(--text-2); font-weight: 500; font-size: .95rem; }
-.topnav a:hover { color: var(--text); text-decoration: none; }
-.theme-toggle {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 1rem;
-  color: var(--text);
+.topnav a {
+  position: relative;
+  color: var(--text-2); font-weight: 500; font-size: .95rem;
+  transition: color .18s ease;
 }
-.theme-toggle:hover { border-color: var(--border-2); }
+.topnav a:hover { color: var(--text); text-decoration: none; }
+.topnav a.is-active { color: var(--text); }
+/* animated underline for hover + active (scrollspy) link */
+.topnav a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(100deg, var(--brand), var(--brand-2));
+  transform: scaleX(0); transform-origin: left; opacity: 0;
+  transition: transform .22s ease, opacity .22s ease;
+}
+.topnav a:hover::after,
+.topnav a.is-active::after { transform: scaleX(1); opacity: 1; }
+
+.theme-toggle {
+  display: inline-grid; place-items: center;
+  width: 40px; height: 40px; padding: 0;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer; color: var(--text);
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.theme-toggle:hover { border-color: var(--border-2); background: var(--panel-2); }
+.theme-toggle:active { transform: scale(.92); }
+.theme-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+.theme-toggle .ti {
+  grid-area: 1 / 1; transition: transform .3s ease, opacity .25s ease;
+}
+/* show the icon for the current theme, swap with a little rotate/fade */
+.theme-toggle .ti-sun  { opacity: 0; transform: rotate(-90deg) scale(.6); }
+.theme-toggle .ti-moon { opacity: 1; transform: rotate(0) scale(1); }
+html[data-theme="light"] .theme-toggle .ti-sun  { opacity: 1; transform: rotate(0) scale(1); }
+html[data-theme="light"] .theme-toggle .ti-moon { opacity: 0; transform: rotate(90deg) scale(.6); }
 
 /* hamburger toggle — hidden on desktop */
 .nav-toggle {
@@ -357,10 +386,26 @@ input::placeholder { color: var(--muted); }
     color: var(--text);
   }
   .topnav a:hover { background: var(--panel-2); text-decoration: none; }
+  .topnav a.is-active { background: color-mix(in srgb, var(--brand) 14%, transparent); }
+  /* drop the desktop underline inside the drawer */
+  .topnav a::after { display: none; }
+
   .theme-toggle {
-    margin-top: 10px; align-self: flex-start;
-    font-size: 1.05rem; padding: 12px 16px; width: 100%; text-align: left;
+    margin-top: 12px; align-self: stretch;
+    width: 44px; height: 44px;
   }
+
+  /* staggered slide-in for the drawer items */
+  .topnav.is-open > * { animation: navItemIn .34s cubic-bezier(.22,.61,.36,1) both; }
+  .topnav.is-open > :nth-child(1) { animation-delay: .04s; }
+  .topnav.is-open > :nth-child(2) { animation-delay: .09s; }
+  .topnav.is-open > :nth-child(3) { animation-delay: .14s; }
+  .topnav.is-open > :nth-child(4) { animation-delay: .19s; }
+}
+
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @media (max-width: 680px) {
@@ -393,7 +438,8 @@ input::placeholder { color: var(--muted); }
 
 /* respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  .topnav, .nav-toggle-bar, .btn { transition: none; }
+  .topnav, .nav-toggle-bar, .btn, .theme-toggle .ti, .topnav a::after { transition: none; }
+  .topnav.is-open > * { animation: none; }
   html { scroll-behavior: auto; }
 }
 
