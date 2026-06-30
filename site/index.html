@@ -177,6 +177,17 @@
             </label>
           </div>
 
+          <label class="field" id="quartoFmtField">
+            <span>Quarto output format</span>
+            <select id="quartoFmt">
+              <option value="html">HTML</option>
+              <option value="pdf">PDF</option>
+              <option value="both">HTML + PDF</option>
+              <option value="docx">Word (docx)</option>
+            </select>
+            <small class="hint">Format block written into the report <code>.qmd</code></small>
+          </label>
+
           <div class="chk-grid">
             <label class="toggle compact">
               <input id="useRenv" type="checkbox" checked />
@@ -233,6 +244,21 @@
               <input id="useDataDict" type="checkbox" />
               <span class="switch"></span>
               <span class="toggle-label">Data dictionary <small>template + raw-data README</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useContributing" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">Community docs <small>CONTRIBUTING + Code of Conduct</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useZenodo" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">Zenodo archive <small>.zenodo.json for a citable DOI</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useSessionInfo" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">Session log <small>capture sessionInfo() on each run</small></span>
             </label>
           </div>
         </fieldset>
