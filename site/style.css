@@ -44,6 +44,9 @@
 
 html { scroll-behavior: smooth; }
 
+/* never allow sideways scroll / off-canvas shadows to leak onto the page */
+html, body { overflow-x: clip; max-width: 100%; }
+
 body {
   margin: 0;
   font-family: "Inter", system-ui, sans-serif;
@@ -51,7 +54,14 @@ body {
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
 }
+
+/* sticky header shouldn't hide anchored sections when jumped to */
+#builder, #workflow { scroll-margin-top: 80px; }
+
+/* lock background scroll while the mobile drawer is open */
+body.nav-open { overflow: hidden; }
 
 code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
@@ -62,11 +72,16 @@ a:hover { text-decoration: underline; }
 .topbar {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
   padding: 14px clamp(16px, 4vw, 48px);
+  padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left));
+  padding-right: max(clamp(16px, 4vw, 48px), env(safe-area-inset-right));
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
+.brand { min-width: 0; }
+.brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
 .logo { font-size: 1.4rem; }
 .brand-name { letter-spacing: -.01em; }
@@ -100,8 +115,10 @@ a:hover { text-decoration: underline; }
 
 .nav-overlay {
   position: fixed; inset: 0; z-index: 40;
-  background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
+  background: rgba(4,8,20,.55); backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .28s ease;
 }
+.nav-overlay.is-open { opacity: 1; }
 
 /* ── hero ────────────────────────────────────────────────── */
 .hero { position: relative; overflow: hidden; padding: clamp(48px, 9vw, 110px) 24px clamp(40px, 6vw, 72px); text-align: center; }
@@ -284,7 +301,13 @@ input::placeholder { color: var(--muted); }
 .next-card h3 { margin: 0 0 14px; font-size: 1.3rem; }
 .next-card ol { margin: 0; padding-left: 22px; color: var(--text-2); }
 .next-card li { margin-bottom: 8px; }
-.next-card code { background: var(--code-bg); color: var(--brand); padding: 2px 8px; border-radius: 6px; font-size: .88em; }
+.next-card code {
+  background: var(--code-bg); color: var(--brand);
+  padding: 2px 8px; border-radius: 6px; font-size: .88em;
+  /* long paths like 02_scripts/01_download_data.R must wrap on narrow screens */
+  white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+  max-width: 100%;
+}
 
 /* ── footer ──────────────────────────────────────────────── */
 .footer { text-align: center; padding: 40px 24px; border-top: 1px solid var(--border); color: var(--text-2); }
@@ -309,16 +332,24 @@ input::placeholder { color: var(--muted); }
     position: fixed; top: 0; right: 0; z-index: 45;
     flex-direction: column; align-items: stretch; justify-content: flex-start;
     gap: 6px;
-    width: min(82vw, 320px); height: 100dvh;
-    padding: 84px 22px 28px;
+    width: min(84vw, 330px); height: 100dvh;
+    padding: 84px 22px calc(28px + env(safe-area-inset-bottom));
+    padding-right: max(22px, env(safe-area-inset-right));
     background: var(--bg-2);
     border-left: 1px solid var(--border);
-    box-shadow: -20px 0 60px -20px rgba(0,0,0,.6);
+    /* off-canvas: no shadow (kept it from bleeding onto the page) + non-interactive */
     transform: translateX(100%);
-    transition: transform .28s ease;
+    visibility: hidden;
+    transition: transform .28s ease, visibility 0s linear .28s;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
-  .topnav.is-open { transform: translateX(0); }
+  .topnav.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    box-shadow: -24px 0 70px -28px rgba(0,0,0,.7);
+    transition: transform .28s ease, visibility 0s;
+  }
 
   .topnav a {
     font-size: 1.05rem; font-weight: 600;

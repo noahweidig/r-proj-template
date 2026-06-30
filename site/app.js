@@ -36,7 +36,8 @@ const PRESETS = {
     pkgs: ["here", "data.table", "tidyverse", "janitor", "sf", "terra"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: false, useLintr: false,
-             usePrecommit: false, useCitation: false, useDataDict: true },
+             usePrecommit: false, useCitation: false, useDataDict: true,
+             useContributing: false, useZenodo: false, useSessionInfo: true },
     runner: "make",
   },
   tabular: {
@@ -45,7 +46,8 @@ const PRESETS = {
     pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "scales", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: true, useLintr: true,
-             usePrecommit: false, useCitation: false, useDataDict: true },
+             usePrecommit: false, useCitation: false, useDataDict: true,
+             useContributing: false, useZenodo: false, useSessionInfo: true },
     runner: "make",
   },
   minimal: {
@@ -54,7 +56,8 @@ const PRESETS = {
     pkgs: ["here", "data.table"],
     flags: { useRenv: false, useQuarto: false, useGithub: false, useRprofile: false,
              useDocker: false, useTestthat: false, useLintr: false,
-             usePrecommit: false, useCitation: false, useDataDict: false },
+             usePrecommit: false, useCitation: false, useDataDict: false,
+             useContributing: false, useZenodo: false, useSessionInfo: false },
     runner: "runr",
   },
   full: {
@@ -63,7 +66,8 @@ const PRESETS = {
     pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "glue", "fs", "scales", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: true, useTestthat: true, useLintr: true,
-             usePrecommit: true, useCitation: true, useDataDict: true },
+             usePrecommit: true, useCitation: true, useDataDict: true,
+             useContributing: true, useZenodo: true, useSessionInfo: true },
     runner: "both",
   },
 };
@@ -174,6 +178,7 @@ function readConfig() {
     license: $("#license").value,
     runner:    $("#runner").value,
     numbering: $("#numbering").value,
+    quartoFmt: $("#quartoFmt").value,
     renv:    $("#useRenv").checked,
     quarto:  $("#useQuarto").checked,
     github:  $("#useGithub").checked,
@@ -184,6 +189,9 @@ function readConfig() {
     precommit:$("#usePrecommit").checked,
     citation:$("#useCitation").checked,
     datadict:$("#useDataDict").checked,
+    contributing:$("#useContributing").checked,
+    zenodo:  $("#useZenodo").checked,
+    sessioninfo:$("#useSessionInfo").checked,
     date:       today(),
     customVars:    readCustomVars(),
     customFolders: readCustomFolders(),
@@ -365,20 +373,25 @@ function genVizScript(c) {
   ]).join("\n");
 }
 
+function qmdFormatBlock(fmt) {
+  const html = ["  html:", "    toc: true", "    toc-depth: 3", "    code-fold: true", "    theme: cosmo"];
+  const pdf  = ["  pdf:", "    toc: true"];
+  const docx = ["  docx:", "    toc: true"];
+  switch (fmt) {
+    case "pdf":  return ["format:", ...pdf];
+    case "docx": return ["format:", ...docx];
+    case "both": return ["format:", ...html, ...pdf];
+    default:     return ["format:", ...html]; // html
+  }
+}
+
 function genQmd(c) {
   return [
     "---",
     `title: "${c.name}"`,
     `author: "${c.author}"`,
     `date: "${c.date}"`,
-    "format:",
-    "  html:",
-    "    toc: true",
-    "    toc-depth: 3",
-    "    code-fold: true",
-    "    theme: cosmo",
-    "  pdf:",
-    "    toc: true",
+    ...qmdFormatBlock(c.quartoFmt),
     "execute:",
     "  echo: false",
     "  warning: false",
@@ -469,7 +482,9 @@ function buildTree(c, root) {
   add("├── config.R                 # Universal config: paths, CRS, theme");
   add("├── README.md");
   if (c.license !== "none") add("├── LICENSE");
+  if (c.contributing) { add("├── CONTRIBUTING.md          # how to contribute"); add("├── CODE_OF_CONDUCT.md"); }
   if (c.citation) add("├── CITATION.cff             # how to cite this work");
+  if (c.zenodo) add("├── .zenodo.json             # archival metadata for a DOI");
   if (c.renv) add("├── renv.lock                # pinned package versions");
   if (c.rprofile) { add("├── .Rprofile                # session defaults / renv autoload"); add("├── .Renviron                # environment variables (template)"); }
   if (useMake(c)) add("├── Makefile                 # run the pipeline with `make`");
@@ -555,8 +570,8 @@ function genMakefile(c) {
     `# Project: ${c.name}`, `# Author:  ${c.author}`, `# Date:    ${c.date}`,
     "# ====================", "",
     "# Default target — run the full pipeline",
-    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""} help`, "",
-    `all: download clean_data model visualize${c.quarto ? " report" : ""}`, "",
+    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""}${c.sessioninfo ? " session" : ""} help`, "",
+    `all: download clean_data model visualize${c.quarto ? " report" : ""}${c.sessioninfo ? " session" : ""}`, "",
     "# Run individual steps ----", "",
     "download:", `\tRscript -e 'source("${md.scripts}/${mn.dl}")'`, "",
     "clean_data:", `\tRscript -e 'source("${md.scripts}/${mn.cl}")'`, "",
@@ -582,6 +597,10 @@ function genMakefile(c) {
     L.push("restore:", "\tRscript -e 'renv::restore()'", "");
     L.push("snapshot:", "\tRscript -e 'renv::snapshot()'", "");
   }
+  if (c.sessioninfo) {
+    L.push("session:",
+      "\tRscript -e 'writeLines(capture.output(sessionInfo()), \"session-info.txt\")'", "");
+  }
   L.push(
     "help:", "\t@echo \"\"", `\t@echo \"  ${c.name}\"`, "\t@echo \"\"",
     "\t@echo \"  Targets:\"",
@@ -598,6 +617,7 @@ function genMakefile(c) {
     L.push("\t@echo \"    make style        Auto-format scripts\"");
   }
   L.push("\t@echo \"    make clean        Delete outputs (raw data preserved)\"");
+  if (c.sessioninfo) L.push("\t@echo \"    make session      Write session-info.txt\"");
   if (c.renv) {
     L.push("\t@echo \"    make restore      Restore renv packages\"");
     L.push("\t@echo \"    make snapshot     Snapshot renv packages\"");
@@ -633,6 +653,13 @@ function genRunR(c) {
     "",
   );
   if (c.quarto) L.push(`quarto::quarto_render(here::here("${rrd.scripts}/${rrn.rpt}"))`, "");
+  if (c.sessioninfo) {
+    L.push(
+      "# Capture the exact environment this run used (reproducibility log)",
+      'writeLines(capture.output(sessionInfo()), here::here("session-info.txt"))',
+      ""
+    );
+  }
   L.push('message("\\n[done] pipeline complete.")', "");
   return L.join("\n");
 }
@@ -641,6 +668,7 @@ function genGitignore(c) {
   const gd = projDirs(c);
   const L = [
     "# History files", ".Rhistory", ".Rapp.history", "",
+    ...(c.sessioninfo ? ["# Per-run reproducibility log", "session-info.txt", ""] : []),
     "# Session Data files", ".RData", ".RDataTmp", "",
     "# User-specific files", ".Ruserdata", "",
     "# RStudio files", ".Rproj.user/", "",
@@ -922,7 +950,7 @@ function genCI(c) {
   if (c.lintr) {
     steps.push(
       "      - name: Lint",
-      "        run: Rscript -e 'lintr::lint_dir(\"02_scripts\")'"
+      `        run: Rscript -e 'lintr::lint_dir("${cid.scripts}")'`
     );
   }
   if (c.testthat) {
@@ -938,6 +966,73 @@ function genCI(c) {
     ""
   );
   return steps.join("\n");
+}
+
+function genContributing(c) {
+  const rd = projDirs(c);
+  const L = [
+    `# Contributing to ${c.name}`, "",
+    "Thanks for taking the time to contribute! 🎉", "",
+    "## Ground rules", "",
+    "- Be respectful — this project follows the",
+    "  [Contributor Covenant](CODE_OF_CONDUCT.md).",
+    "- Open an issue before large changes so we can discuss the approach.",
+    "", "## Getting set up", "", "```r",
+  ];
+  if (c.renv) L.push("renv::restore()   # install the pinned package versions");
+  else        L.push('# install.packages(c(...))  # see config.R for required packages');
+  L.push("```", "", "## Workflow", "",
+    `Scripts live in \`${rd.scripts}/\` and run in numbered order — keep that order intact.`,
+    "Raw data is never edited by hand; regenerate cleaned data from the scripts.", "");
+  if (c.lintr)    L.push("Run `make style` and `make lint` before opening a pull request.", "");
+  if (c.testthat) L.push("Make sure `make test` passes before opening a pull request.", "");
+  L.push("## Pull requests", "",
+    "1. Fork & branch from `main`.",
+    "2. Make focused commits with clear messages.",
+    "3. Open a pull request describing **what** changed and **why**.", "");
+  return L.join("\n");
+}
+
+function genCodeOfConduct(c) {
+  const contact = c.email || "the project maintainers";
+  return [
+    "# Contributor Covenant Code of Conduct", "",
+    "## Our Pledge", "",
+    "We as members, contributors, and leaders pledge to make participation in our",
+    "community a harassment-free experience for everyone, regardless of age, body",
+    "size, visible or invisible disability, ethnicity, sex characteristics, gender",
+    "identity and expression, level of experience, education, socio-economic status,",
+    "nationality, personal appearance, race, religion, or sexual identity and",
+    "orientation.", "",
+    "## Our Standards", "",
+    "Examples of behavior that contributes to a positive environment include being",
+    "respectful, giving and gracefully accepting constructive feedback, and focusing",
+    "on what is best for the community.", "",
+    "## Enforcement", "",
+    `Instances of abusive or otherwise unacceptable behavior may be reported to ${contact}.`,
+    "All complaints will be reviewed and investigated promptly and fairly.", "",
+    "This Code of Conduct is adapted from the [Contributor Covenant][cc], version 2.1.", "",
+    "[cc]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html",
+    "",
+  ].join("\n");
+}
+
+function genZenodo(c) {
+  const parts = c.author.split(/\s+/);
+  const family = parts.length > 1 ? parts.pop() : c.author;
+  const given  = parts.join(" ");
+  const name   = given ? `${family}, ${given}` : c.author;
+  const licMap = { "MIT": "MIT", "Apache-2.0": "Apache-2.0", "GPL-3.0": "GPL-3.0-only", "CC-BY-4.0": "CC-BY-4.0" };
+  const creator = { name };
+  if (c.orcid) creator.orcid = c.orcid;
+  const obj = {
+    title: c.name,
+    description: c.desc || "A reproducible R research project.",
+    upload_type: "software",
+    creators: [creator],
+  };
+  if (c.license !== "none" && licMap[c.license]) obj.license = licMap[c.license];
+  return JSON.stringify(obj, null, 2) + "\n";
 }
 
 /* ── assemble the file map ───────────────────────────────────────────── */
@@ -977,9 +1072,14 @@ function buildFiles(c) {
   if (c.precommit) f[".pre-commit-config.yaml"] = genPrecommit(c);
   if (c.citation) f["CITATION.cff"] = genCitation(c);
   if (c.datadict) {
-    f["01_data/data_dictionary.csv"] = genDataDictCsv();
-    f["01_data/README.md"] = genDataReadme(c);
+    f[`${fd.data}/data_dictionary.csv`] = genDataDictCsv();
+    f[`${fd.data}/README.md`] = genDataReadme(c);
   }
+  if (c.contributing) {
+    f["CONTRIBUTING.md"] = genContributing(c);
+    f["CODE_OF_CONDUCT.md"] = genCodeOfConduct(c);
+  }
+  if (c.zenodo) f[".zenodo.json"] = genZenodo(c);
   if (c.github) {
     f[".gitignore"] = genGitignore(c);
     f[".github/workflows/ci.yml"] = genCI(c);
@@ -1039,9 +1139,11 @@ function refreshPreview() {
   const n = Object.keys(buildFiles(c)).filter((p) => !p.endsWith(".gitkeep")).length;
   $("#fileCount").textContent = `${n} files`;
 
-  // show/hide CRS fieldset + renv step
+  // show/hide CRS fieldset + renv step + quarto format picker
   $("#crsFs").style.display = c.spatial ? "" : "none";
   $("#renvStep").style.display = c.renv ? "" : "none";
+  const qf = $("#quartoFmtField");
+  if (qf) qf.style.display = c.quarto ? "" : "none";
 
   // update dynamic labels that reference generated names
   const pn = scriptNames(c), pd = projDirs(c);
@@ -1151,28 +1253,44 @@ function initNav() {
   const overlay = $("#navOverlay");
   if (!toggle || !nav) return;
 
+  const isOpen = () => nav.classList.contains("is-open");
+
   const open = () => {
     nav.classList.add("is-open");
     toggle.classList.add("is-open");
     toggle.setAttribute("aria-expanded", "true");
     toggle.setAttribute("aria-label", "Close menu");
     overlay.hidden = false;
+    // next frame so the opacity transition runs
+    requestAnimationFrame(() => overlay.classList.add("is-open"));
+    document.body.classList.add("nav-open");
   };
   const close = () => {
     nav.classList.remove("is-open");
     toggle.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open menu");
+    overlay.classList.remove("is-open");
     overlay.hidden = true;
+    document.body.classList.remove("nav-open");
   };
-  const toggleMenu = () =>
-    nav.classList.contains("is-open") ? close() : open();
+  const toggleMenu = (e) => { e.stopPropagation(); isOpen() ? close() : open(); };
 
   toggle.addEventListener("click", toggleMenu);
   overlay.addEventListener("click", close);
   // close after tapping a link (theme toggle keeps the menu open)
   nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", close));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+
+  // belt-and-braces: any tap/click outside the drawer & toggle closes it
+  document.addEventListener("click", (e) => {
+    if (isOpen() && !nav.contains(e.target) && !toggle.contains(e.target)) close();
+  });
+
+  // if the viewport grows back to desktop, reset to a clean state
+  window.matchMedia("(min-width: 761px)").addEventListener("change", (e) => {
+    if (e.matches) close();
+  });
 }
 
 /* ── boot ────────────────────────────────────────────────────────────── */
