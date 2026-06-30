@@ -145,6 +145,17 @@
               <input id="rversion" type="text" value="4.3" />
             </label>
           </div>
+          <label class="field">
+            <span>Numbering style</span>
+            <select id="numbering">
+              <option value="padded">01_, 02_, 03_ — zero-padded (default)</option>
+              <option value="plain">1_, 2_, 3_ — plain integer</option>
+              <option value="alpha">a_, b_, c_ — lowercase alpha</option>
+              <option value="upper">A_, B_, C_ — uppercase alpha</option>
+              <option value="none">No prefix</option>
+            </select>
+            <small class="hint">Prefix applied to folder names and script filenames</small>
+          </label>
           <div class="field-row">
             <label class="field">
               <span>License</span>
@@ -226,6 +237,20 @@
           </div>
         </fieldset>
 
+        <fieldset class="fs">
+          <legend>Custom config variables</legend>
+          <p class="hint">Extra constants appended to config.R under <code># Custom ----</code>.</p>
+          <div id="customVarList" class="custom-list"></div>
+          <button type="button" id="addVarBtn" class="btn btn-ghost btn-sm add-row-btn">+ Add variable</button>
+        </fieldset>
+
+        <fieldset class="fs">
+          <legend>Custom folders</legend>
+          <p class="hint">Additional directories created in the project root (e.g. <code>04_docs/notes</code>).</p>
+          <div id="customFolderList" class="custom-list"></div>
+          <button type="button" id="addFolderBtn" class="btn btn-ghost btn-sm add-row-btn">+ Add folder</button>
+        </fieldset>
+
         <div class="form-actions">
           <button id="downloadBtn" type="button" class="btn btn-primary btn-lg btn-block">
             <span class="btn-icon">⬇</span> Download <span id="dlName">project</span>.zip
@@ -248,7 +273,7 @@
           <button class="tab is-active" data-tab="tree" role="tab">📁 Files</button>
           <button class="tab" data-tab="config" role="tab">⚙️ config.R</button>
           <button class="tab" data-tab="readme" role="tab">📖 README.md</button>
-          <button class="tab" data-tab="script" role="tab">🧪 02_clean_data.R</button>
+          <button id="scriptTab" class="tab" data-tab="script" role="tab">🧪 02_clean_data.R</button>
         </div>
         <div class="tabpane is-active" data-pane="tree">
           <pre id="treeView" class="codeblock tree"></pre>
@@ -296,7 +321,7 @@
         <li>Unzip into your projects folder.</li>
         <li>Open <code><span class="nx-slug">project</span>.Rproj</code> in RStudio.</li>
         <li id="renvStep">Run <code>renv::restore()</code> to install pinned packages.</li>
-        <li>Start with <code>02_scripts/01_download_data.R</code> and work down the numbers.</li>
+        <li id="startStep">Start with <code>02_scripts/01_download_data.R</code> and work through the files in order.</li>
       </ol>
     </div>
   </section>

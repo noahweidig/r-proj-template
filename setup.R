@@ -42,21 +42,46 @@ prompt_default <- function(label, default) {
   if (nchar(val) == 0) default else val
 }
 
+# Helper: return the prefix string for a given 1-based index and style
+num_prefix <- function(n, style) {
+  switch(style,
+    plain  = paste0(n, "_"),
+    alpha  = paste0(letters[n], "_"),
+    upper  = paste0(LETTERS[n], "_"),
+    none   = "",
+    formatC(n, width = 2, flag = "0") |> paste0("_")  # default: padded (01_, 02_, ...)
+  )
+}
+
 proj_name   <- prompt_required("Project name")
 proj_author <- prompt_required("Author name")
 crs_proj    <- prompt_default("Projected CRS EPSG", "5070")
+num_style   <- prompt_default("Numbering style (padded/plain/alpha/upper/none)", "padded")
 use_renv    <- prompt_default("Initialise renv? (yes/no)", "yes")
+
+p <- function(n) num_prefix(n, num_style)
+
+data_dir    <- paste0(p(1), "data")
+scripts_dir <- paste0(p(2), "scripts")
+outputs_dir <- paste0(p(3), "outputs")
+
+dl_file  <- paste0(p(1), "download_data.R")
+cl_file  <- paste0(p(2), "clean_data.R")
+mod_file <- paste0(p(3), "model_data.R")
+viz_file <- paste0(p(4), "visualize_data.R")
+rpt_file <- paste0(p(5), "report_data.qmd")
 
 today <- format(Sys.Date(), "%Y-%m-%d")
 
 # Confirm before doing anything ----
 
 cat("\nSummary ----\n")
-cat("  Project : ", proj_name,   "\n")
-cat("  Author  : ", proj_author, "\n")
-cat("  CRS     : ", crs_proj,    "\n")
-cat("  renv    : ", use_renv,    "\n")
-cat("  Folder  : ", getwd(),     "\n")
+cat("  Project   : ", proj_name,   "\n")
+cat("  Author    : ", proj_author, "\n")
+cat("  CRS       : ", crs_proj,    "\n")
+cat("  Numbering : ", num_style,   "\n")
+cat("  renv      : ", use_renv,    "\n")
+cat("  Folder    : ", getwd(),     "\n")
 cat("----\n")
 
 confirm <- readline("Create project? (yes/no) [yes]: ")
@@ -78,11 +103,11 @@ write_file <- function(path, content) {
 # 1. Directory structure ----
 
 dirs <- c(
-  "01_data/raw_data",
-  "01_data/clean_data",
-  "02_scripts",
-  "03_outputs/figures",
-  "03_outputs/tables"
+  file.path(data_dir, "raw_data"),
+  file.path(data_dir, "clean_data"),
+  scripts_dir,
+  file.path(outputs_dir, "figures"),
+  file.path(outputs_dir, "tables")
 )
 
 message("\n Creating directories ----")
@@ -148,11 +173,11 @@ config_content <- c(
   "",
   "# Paths ----",
   'PROJ_ROOT   <- here::here()',
-  'DATA_RAW    <- here::here("01_data", "raw_data")',
-  'DATA_CLEAN  <- here::here("01_data", "clean_data")',
-  'SCRIPTS     <- here::here("02_scripts")',
-  'OUT_FIGURES <- here::here("03_outputs", "figures")',
-  'OUT_TABLES  <- here::here("03_outputs", "tables")',
+  paste0('DATA_RAW    <- here::here("', data_dir, '", "raw_data")'),
+  paste0('DATA_CLEAN  <- here::here("', data_dir, '", "clean_data")'),
+  paste0('SCRIPTS     <- here::here("', scripts_dir, '")'),
+  paste0('OUT_FIGURES <- here::here("', outputs_dir, '", "figures")'),
+  paste0('OUT_TABLES  <- here::here("', outputs_dir, '", "tables")'),
   "",
   "# CRS ----",
   "CRS_GEO     <- 4326   # WGS 84 geographic",
@@ -188,11 +213,11 @@ r_header <- function(filename, description) {
   )
 }
 
-# 01_download_data.R
+# download script
 write_file(
-  "02_scripts/01_download_data.R",
+  file.path(scripts_dir, dl_file),
   c(
-    r_header("01_download_data.R", "Download raw data from source(s) to 01_data/raw_data/"),
+    r_header(dl_file, paste0("Download raw data from source(s) to ", data_dir, "/raw_data/")),
     "# Download ----",
     "",
     "# Example: download a file",
@@ -203,11 +228,11 @@ write_file(
   )
 )
 
-# 02_clean_data.R
+# clean script
 write_file(
-  "02_scripts/02_clean_data.R",
+  file.path(scripts_dir, cl_file),
   c(
-    r_header("02_clean_data.R", "Read raw data, clean/transform, write to 01_data/clean_data/"),
+    r_header(cl_file, paste0("Read raw data, clean/transform, write to ", data_dir, "/clean_data/")),
     "# Read ----",
     "",
     "# raw <- sf::st_read(file.path(DATA_RAW, \"data.geojson\"))",
@@ -225,11 +250,11 @@ write_file(
   )
 )
 
-# 03_model_data.R
+# model script
 write_file(
-  "02_scripts/03_model_data.R",
+  file.path(scripts_dir, mod_file),
   c(
-    r_header("03_model_data.R", "Model / analyse cleaned data"),
+    r_header(mod_file, "Model / analyse cleaned data"),
     "# Read ----",
     "",
     "# clean <- sf::st_read(file.path(DATA_CLEAN, \"data_clean.gpkg\"))",
@@ -246,11 +271,11 @@ write_file(
   )
 )
 
-# 04_visualize_data.R
+# visualize script
 write_file(
-  "02_scripts/04_visualize_data.R",
+  file.path(scripts_dir, viz_file),
   c(
-    r_header("04_visualize_data.R", "Produce maps, charts, and figures → 03_outputs/figures/"),
+    r_header(viz_file, paste0("Produce maps, charts, and figures → ", outputs_dir, "/figures/")),
     "library(ggplot2)",
     "",
     "# Read ----",
@@ -271,8 +296,8 @@ write_file(
   )
 )
 
-# 05_report_data.qmd
-message("  [created] 02_scripts/05_report_data.qmd")
+# report (Quarto)
+message("  [created] ", file.path(scripts_dir, rpt_file))
 
 qmd_content <- c(
   "---",
@@ -322,7 +347,7 @@ qmd_content <- c(
   ""
 )
 
-writeLines(qmd_content, "02_scripts/05_report_data.qmd")
+writeLines(qmd_content, file.path(scripts_dir, rpt_file))
 
 # 5. README.md ----
 
@@ -348,16 +373,16 @@ readme_content <- c(
   "├── README.md",
   "├── LICENSE",
   "├── renv.lock",
-  "├── 01_data/",
+  paste0("├── ", data_dir, "/"),
   "│   ├── raw_data/                   # Downloaded / original data (do not edit)",
   "│   └── clean_data/                 # Processed data ready for analysis",
-  "├── 02_scripts/",
-  "│   ├── 01_download_data.R",
-  "│   ├── 02_clean_data.R",
-  "│   ├── 03_model_data.R",
-  "│   ├── 04_visualize_data.R",
-  "│   └── 05_report_data.qmd",
-  "└── 03_outputs/",
+  paste0("├── ", scripts_dir, "/"),
+  paste0("│   ├── ", dl_file),
+  paste0("│   ├── ", cl_file),
+  paste0("│   ├── ", mod_file),
+  paste0("│   ├── ", viz_file),
+  paste0("│   └── ", rpt_file),
+  paste0("└── ", outputs_dir, "/"),
   "    ├── figures/",
   "    └── tables/",
   "```",
@@ -367,11 +392,11 @@ readme_content <- c(
   "Run scripts in numbered order:",
   "",
   "```r",
-  'source("02_scripts/01_download_data.R")',
-  'source("02_scripts/02_clean_data.R")',
-  'source("02_scripts/03_model_data.R")',
-  'source("02_scripts/04_visualize_data.R")',
-  "# Then render 05_report_data.qmd in RStudio or via quarto::quarto_render()",
+  paste0('source("', scripts_dir, '/', dl_file, '")'),
+  paste0('source("', scripts_dir, '/', cl_file, '")'),
+  paste0('source("', scripts_dir, '/', mod_file, '")'),
+  paste0('source("', scripts_dir, '/', viz_file, '")'),
+  paste0("# Then render ", rpt_file, " in RStudio or via quarto::quarto_render()"),
   "```",
   "",
   "## Requirements",
@@ -450,27 +475,27 @@ makefile_content <- c(
   "# Run individual steps ----",
   "",
   "download:",
-  "\tRscript -e 'source(\"02_scripts/01_download_data.R\")'",
+  paste0("\tRscript -e 'source(\"", scripts_dir, "/", dl_file, "\")'"),
   "",
   "clean_data:",
-  "\tRscript -e 'source(\"02_scripts/02_clean_data.R\")'",
+  paste0("\tRscript -e 'source(\"", scripts_dir, "/", cl_file, "\")'"),
   "",
   "model:",
-  "\tRscript -e 'source(\"02_scripts/03_model_data.R\")'",
+  paste0("\tRscript -e 'source(\"", scripts_dir, "/", mod_file, "\")'"),
   "",
   "visualize:",
-  "\tRscript -e 'source(\"02_scripts/04_visualize_data.R\")'",
+  paste0("\tRscript -e 'source(\"", scripts_dir, "/", viz_file, "\")'"),
   "",
   "report:",
-  "\tquarto render 02_scripts/05_report_data.qmd",
+  paste0("\tquarto render ", scripts_dir, "/", rpt_file),
   "",
   "# Helpers ----",
   "",
   "# Delete all outputs and cleaned data (raw data is preserved)",
   "clean:",
-  "\tRscript -e 'unlink(\"01_data/clean_data/*\")'",
-  "\tRscript -e 'unlink(\"03_outputs/figures/*\")'",
-  "\tRscript -e 'unlink(\"03_outputs/tables/*\")'",
+  paste0("\tRscript -e 'unlink(\"", data_dir, "/clean_data/*\")'"),
+  paste0("\tRscript -e 'unlink(\"", outputs_dir, "/figures/*\")'"),
+  paste0("\tRscript -e 'unlink(\"", outputs_dir, "/tables/*\")'"),
   "\t@echo \"Outputs cleared. Raw data preserved.\"",
   "",
   "# Restore renv packages",
