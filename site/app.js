@@ -1252,61 +1252,41 @@ function initTheme() {
 }
 
 /* ── mobile nav ──────────────────────────────────────────────────────── */
+// Dead-simple drawer: one source of truth — the `nav-open` class on <body>.
+// CSS handles all of the showing/hiding/animation off that class; JS only
+// flips it. No overlay element, no visibility timers, no transitionend hacks.
 function initNav() {
-  const toggle  = $("#navToggle");
-  const nav     = $("#topnav");
-  const overlay = $("#navOverlay");
+  const toggle = $("#navToggle");
+  const nav    = $("#topnav");
   if (!toggle || !nav) return;
 
-  const root = document.documentElement;
-  const isOpen = () => document.body.classList.contains("nav-open");
-
-  const open = () => {
-    if (isOpen()) return;
-    nav.classList.add("is-open");
-    toggle.classList.add("is-open");
-    toggle.setAttribute("aria-expanded", "true");
-    toggle.setAttribute("aria-label", "Close menu");
-    overlay.hidden = false;
-    // next frame so the opacity transition runs
-    requestAnimationFrame(() => overlay.classList.add("is-open"));
-    // lock background scroll WITHOUT moving the body. position:fixed would drag
-    // the drawer's containing block (the backdrop-filtered .topbar) off-screen;
-    // overflow:hidden keeps the page — and the drawer — exactly where they are.
-    root.classList.add("nav-open");
-    document.body.classList.add("nav-open");
+  const body = document.body;
+  const setOpen = (open) => {
+    body.classList.toggle("nav-open", open);
+    toggle.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
   };
 
-  const close = () => {
-    if (!isOpen()) return;
-    nav.classList.remove("is-open");
-    toggle.classList.remove("is-open");
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "Open menu");
-    overlay.classList.remove("is-open");
-    root.classList.remove("nav-open");
-    document.body.classList.remove("nav-open");
-    // hide the overlay only after it has faded out
-    const hide = () => { if (!isOpen()) overlay.hidden = true; };
-    overlay.addEventListener("transitionend", hide, { once: true });
-    setTimeout(hide, 360);
-  };
+  // toggle button opens / closes
+  toggle.addEventListener("click", () => setOpen(!body.classList.contains("nav-open")));
 
-  const toggleMenu = (e) => { e.stopPropagation(); isOpen() ? close() : open(); };
+  // tapping a link navigates (native anchor) and closes the drawer
+  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => setOpen(false)));
 
-  toggle.addEventListener("click", toggleMenu);
-  overlay.addEventListener("click", () => close());
+  // tap anywhere outside the drawer (the dimmed page) closes it. runs after the
+  // toggle/link handlers above, which short-circuit via the contains() checks.
+  document.addEventListener("click", (e) => {
+    if (!body.classList.contains("nav-open")) return;
+    if (nav.contains(e.target) || toggle.contains(e.target)) return;
+    setOpen(false);
+  });
 
-  // close after tapping a link. the page is no longer pinned, so native anchor
-  // scrolling (scroll-behavior:smooth + scroll-margin-top in CSS) lands the
-  // section correctly — no manual scrollIntoView needed.
-  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => close()));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
 
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
-
-  // if the viewport grows back to desktop, reset to a clean state
+  // grow back to desktop → make sure we're not stuck in the open state
   const mq = window.matchMedia("(min-width: 761px)");
-  const onMq = (e) => { if (e.matches) close(); };
+  const onMq = (e) => { if (e.matches) setOpen(false); };
   mq.addEventListener ? mq.addEventListener("change", onMq) : mq.addListener(onMq);
 
   // scrollspy: highlight the nav link for whichever section is in view
