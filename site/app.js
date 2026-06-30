@@ -16,10 +16,8 @@ const PACKAGES = [
   { id: "data.table",label: "data.table",comment: "fast tabular data (load 1st)", core: true },
   { id: "tidyverse", label: "tidyverse", comment: "data wrangling & plotting",  core: true  },
   { id: "janitor",   label: "janitor",   comment: "column name cleaning",       core: true  },
-  { id: "lubridate", label: "lubridate", comment: "date/time handling" },
   { id: "glue",      label: "glue",      comment: "string interpolation" },
   { id: "fs",        label: "fs",        comment: "tidy file-system ops" },
-  { id: "scales",    label: "scales",    comment: "axis / label formatting" },
   { id: "conflicted",label: "conflicted",comment: "force explicit conflict choices" },
   { id: "sf",        label: "sf",        comment: "vector spatial data",        spatial: true },
   { id: "terra",     label: "terra",     comment: "raster spatial data",        spatial: true },
@@ -43,7 +41,7 @@ const PRESETS = {
   tabular: {
     spatial: false,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "scales", "conflicted"],
+    pkgs: ["here", "data.table", "tidyverse", "janitor", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: true, useLintr: true,
              usePrecommit: false, useCitation: false, useDataDict: true,
@@ -63,7 +61,7 @@ const PRESETS = {
   full: {
     spatial: false,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "glue", "fs", "scales", "conflicted"],
+    pkgs: ["here", "data.table", "tidyverse", "janitor", "glue", "fs", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: true, useTestthat: true, useLintr: true,
              usePrecommit: true, useCitation: true, useDataDict: true,
@@ -243,7 +241,8 @@ function genConfig(c) {
     if (hasTidy) {
       L.push(
         'conflicts_prefer(dplyr::filter)',
-        'conflicts_prefer(dplyr::lag)'
+        'conflicts_prefer(dplyr::lag)',
+        'conflicts_prefer(dplyr::select)'
       );
       if (hasDT) {
         L.push(
@@ -327,14 +326,14 @@ function genDownloadScript(c) {
 function genCleanScript(c) {
   const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
-    ? '# raw <- sf::st_read(file.path(DATA_RAW, "data.geojson"))'
-    : '# raw <- data.table::fread(file.path(DATA_RAW, "data.csv"))';
+    ? '# raw <- st_read(file.path(DATA_RAW, "data.geojson"))'
+    : '# raw <- fread(file.path(DATA_RAW, "data.csv"))';
   const clean = c.spatial
-    ? ["# clean <- raw |>", "#   janitor::clean_names() |>", "#   sf::st_transform(CRS_PROJ)"]
-    : ["# clean <- raw |>", "#   janitor::clean_names()"];
+    ? ["# clean <- raw |>", "#   clean_names() |>", "#   st_transform(CRS_PROJ)"]
+    : ["# clean <- raw |>", "#   clean_names()"];
   const write = c.spatial
-    ? '# sf::st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
-    : '# data.table::fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
+    ? '# st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
+    : '# fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
   return rHeader(c, s.cl, `Read raw data, clean/transform, write to ${d.data}/clean_data/`).concat([
     "# Read ----", "", read, "",
     "# Clean ----", "", ...clean, "",
@@ -345,8 +344,8 @@ function genCleanScript(c) {
 function genModelScript(c) {
   const s = scriptNames(c);
   const read = c.spatial
-    ? '# clean <- sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-    : '# clean <- data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))';
+    ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
+    : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))';
   return rHeader(c, s.mod, "Model / analyse cleaned data").concat([
     "# Read ----", "", read, "",
     "# Model ----", "", "# results <- lm(y ~ x, data = clean)", "# summary(results)", "",
@@ -357,8 +356,8 @@ function genModelScript(c) {
 function genVizScript(c) {
   const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
-    ? '# clean <- sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-    : '# clean <- data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))';
+    ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
+    : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))';
   const plot = c.spatial
     ? ["# p <- ggplot(clean) +", "#   geom_sf(aes(fill = variable)) +",
        "#   scale_fill_viridis_c() +", '#   labs(title = "My Map", fill = "Value")']
@@ -410,8 +409,8 @@ function genQmd(c) {
     "## Data", "",
     "```{r load-data}",
     c.spatial
-      ? '# clean <- sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-      : '# clean <- data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))',
+      ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
+      : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))',
     "```",
     "",
     "## Results", "", "```{r results}", "# Your analysis output here", "```",
@@ -808,8 +807,8 @@ function genTestthatTest(c) {
     "",
     'test_that("cleaned data has no duplicate rows", {',
     "  # clean <- " + (c.spatial
-      ? 'sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-      : 'data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))') + "",
+      ? 'st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
+      : 'fread(file.path(DATA_CLEAN, "data_clean.csv"))') + "",
     "  # expect_equal(anyDuplicated(clean), 0)",
     "  expect_true(TRUE)  # replace with a real assertion",
     "})",
