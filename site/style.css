@@ -60,14 +60,8 @@ body {
 /* sticky header shouldn't hide anchored sections when jumped to */
 #builder, #workflow { scroll-margin-top: 80px; }
 
-/* lock background scroll while the mobile drawer is open.
-   IMPORTANT: do NOT lock with `position: fixed` on the body. The sticky .topbar
-   has a backdrop-filter, which makes it the containing block for the drawer and
-   overlay (both position:fixed). Shifting the body up by the scroll offset drags
-   that containing block off-screen, so the drawer opens near the top of the
-   document instead of in the viewport. overflow:hidden locks scrolling without
-   moving the body, keeping the drawer exactly where it belongs. */
-html.nav-open, body.nav-open { overflow: hidden; overscroll-behavior: none; }
+/* lock background scroll while the mobile drawer is open */
+body.nav-open { overflow: hidden; overscroll-behavior: none; }
 
 code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
@@ -82,9 +76,18 @@ a:hover { text-decoration: underline; }
   padding: 14px clamp(16px, 4vw, 48px);
   padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left));
   padding-right: max(clamp(16px, 4vw, 48px), env(safe-area-inset-right));
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+/* Blur + tint live on a pseudo-element, NOT on .topbar itself. A backdrop-filter
+   on .topbar would make it the containing block for its position:fixed children
+   (the mobile drawer), pinning the drawer to the header instead of the viewport.
+   Keeping the filter on a child box leaves the drawer free to size to the
+   viewport. */
+.topbar::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
 }
 .brand { min-width: 0; }
 .brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -147,13 +150,6 @@ html[data-theme="light"] .theme-toggle .ti-moon { opacity: 0; transform: rotate(
 .nav-toggle.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; }
 .nav-toggle.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-.nav-overlay {
-  position: fixed; inset: 0; z-index: 40;
-  background: rgba(4,8,20,.55); backdrop-filter: blur(3px);
-  opacity: 0; transition: opacity .28s ease;
-  touch-action: none; overscroll-behavior: contain;
-}
-.nav-overlay.is-open { opacity: 1; }
 
 /* ── hero ────────────────────────────────────────────────── */
 .hero { position: relative; overflow: hidden; padding: clamp(48px, 9vw, 110px) 24px clamp(40px, 6vw, 72px); text-align: center; }
@@ -363,6 +359,8 @@ input::placeholder { color: var(--muted); }
 @media (max-width: 760px) {
   .nav-toggle { display: flex; }
 
+  /* off-canvas drawer. .topbar no longer carries a backdrop-filter, so this
+     fixed element sizes to the viewport — not the header. */
   .topnav {
     position: fixed; top: 0; right: 0; z-index: 45;
     flex-direction: column; align-items: stretch; justify-content: flex-start;
@@ -372,18 +370,18 @@ input::placeholder { color: var(--muted); }
     padding-right: max(22px, env(safe-area-inset-right));
     background: var(--bg-2);
     border-left: 1px solid var(--border);
-    /* off-canvas: no shadow (kept it from bleeding onto the page) + non-interactive */
+    box-shadow: -24px 0 70px -28px rgba(0,0,0,.7);
     transform: translateX(100%);
-    visibility: hidden;
-    transition: transform .28s ease, visibility 0s linear .28s;
+    transition: transform .28s ease;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .topnav.is-open {
-    transform: translateX(0);
-    visibility: visible;
-    box-shadow: -24px 0 70px -28px rgba(0,0,0,.7);
-    transition: transform .28s ease, visibility 0s;
+  body.nav-open .topnav { transform: translateX(0); }
+
+  /* dimmed page behind the drawer; tapping it closes the menu (handled in JS) */
+  body.nav-open::after {
+    content: ""; position: fixed; inset: 0; z-index: 40;
+    background: rgba(4,8,20,.55); backdrop-filter: blur(3px);
   }
 
   .topnav a {
@@ -404,18 +402,6 @@ input::placeholder { color: var(--muted); }
     margin-top: 12px; align-self: stretch;
     width: 44px; height: 44px;
   }
-
-  /* staggered slide-in for the drawer items */
-  .topnav.is-open > * { animation: navItemIn .34s cubic-bezier(.22,.61,.36,1) both; }
-  .topnav.is-open > :nth-child(1) { animation-delay: .04s; }
-  .topnav.is-open > :nth-child(2) { animation-delay: .09s; }
-  .topnav.is-open > :nth-child(3) { animation-delay: .14s; }
-  .topnav.is-open > :nth-child(4) { animation-delay: .19s; }
-}
-
-@keyframes navItemIn {
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
 }
 
 @media (max-width: 680px) {
@@ -449,7 +435,6 @@ input::placeholder { color: var(--muted); }
 /* respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .topnav, .nav-toggle-bar, .btn, .theme-toggle .ti, .topnav a::after { transition: none; }
-  .topnav.is-open > * { animation: none; }
   html { scroll-behavior: auto; }
 }
 
