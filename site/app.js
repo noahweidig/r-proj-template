@@ -32,6 +32,7 @@ const PACKAGES = [
 const PRESETS = {
   spatial: {
     spatial: true,
+    numbering: "padded",
     pkgs: ["here", "data.table", "tidyverse", "janitor", "sf", "terra"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: false, useLintr: false,
@@ -40,6 +41,7 @@ const PRESETS = {
   },
   tabular: {
     spatial: false,
+    numbering: "padded",
     pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "scales", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: true, useLintr: true,
@@ -48,6 +50,7 @@ const PRESETS = {
   },
   minimal: {
     spatial: false,
+    numbering: "none",
     pkgs: ["here", "data.table"],
     flags: { useRenv: false, useQuarto: false, useGithub: false, useRprofile: false,
              useDocker: false, useTestthat: false, useLintr: false,
@@ -56,6 +59,7 @@ const PRESETS = {
   },
   full: {
     spatial: false,
+    numbering: "padded",
     pkgs: ["here", "data.table", "tidyverse", "janitor", "lubridate", "glue", "fs", "scales", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: true, useTestthat: true, useLintr: true,
@@ -77,6 +81,74 @@ const slugify = (s) =>
 const today = () => new Date().toISOString().slice(0, 10);
 const year  = () => new Date().getFullYear();
 const pad   = (s, n) => (s + " ".repeat(n)).slice(0, n);
+
+/* ── numbering helpers ───────────────────────────────────────────────── */
+function numPrefix(n, style) {
+  switch (style) {
+    case "plain": return n + "_";
+    case "alpha": return String.fromCharCode(96 + n) + "_";
+    case "upper": return String.fromCharCode(64 + n) + "_";
+    case "none":  return "";
+    default:      return String(n).padStart(2, "0") + "_"; // "padded"
+  }
+}
+
+function projDirs(c) {
+  const p = (n) => numPrefix(n, c.numbering);
+  return { data: p(1) + "data", scripts: p(2) + "scripts", outputs: p(3) + "outputs" };
+}
+
+function scriptNames(c) {
+  const p = (n) => numPrefix(n, c.numbering);
+  return {
+    dl:  p(1) + "download_data.R",
+    cl:  p(2) + "clean_data.R",
+    mod: p(3) + "model_data.R",
+    viz: p(4) + "visualize_data.R",
+    rpt: p(5) + "report_data.qmd",
+  };
+}
+
+/* ── custom var / folder row builders ───────────────────────────────── */
+function addVarRow(name = "", value = "", comment = "") {
+  const row = document.createElement("div");
+  row.className = "custom-row";
+  row.innerHTML =
+    `<input type="text" class="cv-name"  placeholder="VAR_NAME" value="${name.replace(/"/g,'&quot;')}" />` +
+    `<input type="text" class="cv-value" placeholder="value or &quot;string&quot;" value="${value.replace(/"/g,'&quot;')}" />` +
+    `<input type="text" class="cv-comment" placeholder="comment (optional)" value="${comment.replace(/"/g,'&quot;')}" />` +
+    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+  row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
+  row.querySelectorAll("input").forEach((i) => i.addEventListener("input", refreshPreview));
+  document.getElementById("customVarList").appendChild(row);
+}
+
+function addFolderRow(path = "") {
+  const row = document.createElement("div");
+  row.className = "custom-row";
+  row.innerHTML =
+    `<input type="text" class="cf-path" placeholder="04_docs/notes" value="${path.replace(/"/g,'&quot;')}" />` +
+    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+  row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
+  row.querySelector("input").addEventListener("input", refreshPreview);
+  document.getElementById("customFolderList").appendChild(row);
+}
+
+function readCustomVars() {
+  return $$(".custom-row", document.getElementById("customVarList"))
+    .map((r) => ({
+      name:    r.querySelector(".cv-name").value.trim(),
+      value:   r.querySelector(".cv-value").value.trim(),
+      comment: r.querySelector(".cv-comment").value.trim(),
+    }))
+    .filter((v) => v.name);
+}
+
+function readCustomFolders() {
+  return $$(".custom-row", document.getElementById("customFolderList"))
+    .map((r) => r.querySelector(".cf-path").value.trim())
+    .filter(Boolean);
+}
 
 /* ── read the form into a config object ──────────────────────────────── */
 function readConfig() {
@@ -100,7 +172,8 @@ function readConfig() {
     seed:    $("#seed").value.trim()    || "42",
     rver:    $("#rversion").value.trim() || "4.3",
     license: $("#license").value,
-    runner:  $("#runner").value,
+    runner:    $("#runner").value,
+    numbering: $("#numbering").value,
     renv:    $("#useRenv").checked,
     quarto:  $("#useQuarto").checked,
     github:  $("#useGithub").checked,
@@ -111,7 +184,9 @@ function readConfig() {
     precommit:$("#usePrecommit").checked,
     citation:$("#useCitation").checked,
     datadict:$("#useDataDict").checked,
-    date:    today(),
+    date:       today(),
+    customVars:    readCustomVars(),
+    customFolders: readCustomFolders(),
   };
 }
 
@@ -173,15 +248,16 @@ function genConfig(c) {
       L.push("# e.g. conflicts_prefer(data.table::first)");
     }
   }
+  const d = projDirs(c);
   L.push(
     "",
     "# Paths ----",
     "PROJ_ROOT   <- here::here()",
-    'DATA_RAW    <- here::here("01_data", "raw_data")',
-    'DATA_CLEAN  <- here::here("01_data", "clean_data")',
-    'SCRIPTS     <- here::here("02_scripts")',
-    'OUT_FIGURES <- here::here("03_outputs", "figures")',
-    'OUT_TABLES  <- here::here("03_outputs", "tables")',
+    `DATA_RAW    <- here::here("${d.data}", "raw_data")`,
+    `DATA_CLEAN  <- here::here("${d.data}", "clean_data")`,
+    `SCRIPTS     <- here::here("${d.scripts}")`,
+    `OUT_FIGURES <- here::here("${d.outputs}", "figures")`,
+    `OUT_TABLES  <- here::here("${d.outputs}", "tables")`,
     ""
   );
   if (c.spatial) {
@@ -200,6 +276,15 @@ function genConfig(c) {
     `set.seed(${c.seed})`,
     ""
   );
+  if (c.customVars && c.customVars.length > 0) {
+    L.push("# Custom ----");
+    const nw = Math.max(...c.customVars.map((v) => v.name.length), 1);
+    c.customVars.forEach((v) => {
+      const line = `${pad(v.name, nw)} <- ${v.value}`;
+      L.push(v.comment ? `${line}  # ${v.comment}` : line);
+    });
+    L.push("");
+  }
   return L.join("\n");
 }
 
@@ -219,7 +304,8 @@ function rHeader(c, filename, description) {
 }
 
 function genDownloadScript(c) {
-  return rHeader(c, "01_download_data.R", "Download raw data from source(s) to 01_data/raw_data/").concat([
+  const s = scriptNames(c), d = projDirs(c);
+  return rHeader(c, s.dl, `Download raw data from source(s) to ${d.data}/raw_data/`).concat([
     "# Download ----",
     "",
     "# Example: download a file",
@@ -231,6 +317,7 @@ function genDownloadScript(c) {
 }
 
 function genCleanScript(c) {
+  const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
     ? '# raw <- sf::st_read(file.path(DATA_RAW, "data.geojson"))'
     : '# raw <- data.table::fread(file.path(DATA_RAW, "data.csv"))';
@@ -240,7 +327,7 @@ function genCleanScript(c) {
   const write = c.spatial
     ? '# sf::st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
     : '# data.table::fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
-  return rHeader(c, "02_clean_data.R", "Read raw data, clean/transform, write to 01_data/clean_data/").concat([
+  return rHeader(c, s.cl, `Read raw data, clean/transform, write to ${d.data}/clean_data/`).concat([
     "# Read ----", "", read, "",
     "# Clean ----", "", ...clean, "",
     "# Write ----", "", write, "",
@@ -248,10 +335,11 @@ function genCleanScript(c) {
 }
 
 function genModelScript(c) {
+  const s = scriptNames(c);
   const read = c.spatial
     ? '# clean <- sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
     : '# clean <- data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))';
-  return rHeader(c, "03_model_data.R", "Model / analyse cleaned data").concat([
+  return rHeader(c, s.mod, "Model / analyse cleaned data").concat([
     "# Read ----", "", read, "",
     "# Model ----", "", "# results <- lm(y ~ x, data = clean)", "# summary(results)", "",
     "# Save results ----", "", '# saveRDS(results, file.path(OUT_TABLES, "model_results.rds"))', "",
@@ -259,6 +347,7 @@ function genModelScript(c) {
 }
 
 function genVizScript(c) {
+  const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
     ? '# clean <- sf::st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
     : '# clean <- data.table::fread(file.path(DATA_CLEAN, "data_clean.csv"))';
@@ -268,7 +357,7 @@ function genVizScript(c) {
     : ["# p <- ggplot(clean, aes(x = x, y = y)) +", "#   geom_point() +",
        '#   labs(title = "My Chart")'];
   const out = c.spatial ? "map.png" : "chart.png";
-  return rHeader(c, "04_visualize_data.R", "Produce maps, charts, and figures → 03_outputs/figures/").concat([
+  return rHeader(c, s.viz, `Produce maps, charts, and figures → ${d.outputs}/figures/`).concat([
     "library(ggplot2)", "",
     "# Read ----", "", read, "",
     "# Plot ----", "", ...plot, "",
@@ -345,12 +434,13 @@ function genReadme(c) {
   if (useMake(c)) {
     L.push("```sh", "make all          # run the whole pipeline", "```", "");
   }
+  const rd = projDirs(c), rn = scriptNames(c);
   L.push("Or from R:", "", "```r",
-    'source("02_scripts/01_download_data.R")',
-    'source("02_scripts/02_clean_data.R")',
-    'source("02_scripts/03_model_data.R")',
-    'source("02_scripts/04_visualize_data.R")');
-  if (c.quarto) L.push("# Then render 05_report_data.qmd in RStudio or via quarto::quarto_render()");
+    `source("${rd.scripts}/${rn.dl}")`,
+    `source("${rd.scripts}/${rn.cl}")`,
+    `source("${rd.scripts}/${rn.mod}")`,
+    `source("${rd.scripts}/${rn.viz}")`);
+  if (c.quarto) L.push(`# Then render ${rn.rpt} in RStudio or via quarto::quarto_render()`);
   L.push("```", "");
   if (useRunR(c)) L.push("Or run everything at once:", "", "```sh", "Rscript run.R", "```", "");
   if (c.docker) {
@@ -374,6 +464,7 @@ function genReadme(c) {
 function buildTree(c, root) {
   const t = [root + "/"];
   const add = (line) => t.push(line);
+  const td = projDirs(c), tn = scriptNames(c);
   add(`├── ${c.slug}.Rproj          # RStudio project file (open this to launch)`);
   add("├── config.R                 # Universal config: paths, CRS, theme");
   add("├── README.md");
@@ -387,28 +478,35 @@ function buildTree(c, root) {
   if (c.lintr) { add("├── .lintr                   # lintr rules"); add("├── .editorconfig            # editor whitespace rules"); }
   if (c.precommit) add("├── .pre-commit-config.yaml  # git pre-commit hooks");
   if (c.github) add("├── .gitignore");
-  add("├── 01_data/");
+  add(`├── ${td.data}/`);
   if (c.datadict) {
     add("│   ├── README.md            # what lives where + data dictionary");
     add("│   ├── data_dictionary.csv");
   }
   add("│   ├── raw_data/            # downloaded / original data (do not edit)");
   add("│   └── clean_data/          # processed data ready for analysis");
-  add("├── 02_scripts/");
-  add("│   ├── 01_download_data.R");
-  add("│   ├── 02_clean_data.R");
-  add("│   ├── 03_model_data.R");
-  add(`│   ${c.quarto ? "├" : "└"}── 04_visualize_data.R`);
-  if (c.quarto) add("│   └── 05_report_data.qmd");
+  add(`├── ${td.scripts}/`);
+  add(`│   ├── ${tn.dl}`);
+  add(`│   ├── ${tn.cl}`);
+  add(`│   ├── ${tn.mod}`);
+  add(`│   ${c.quarto ? "├" : "└"}── ${tn.viz}`);
+  if (c.quarto) add(`│   └── ${tn.rpt}`);
   if (c.testthat) {
     add("├── tests/");
     add("│   ├── testthat.R");
     add("│   └── testthat/");
     add("│       └── test-clean.R");
   }
-  add("└── 03_outputs/");
+  const hasCF = c.customFolders && c.customFolders.length > 0;
+  add(`${hasCF ? "├" : "└"}── ${td.outputs}/`);
   add("    ├── figures/");
   add("    └── tables/");
+  if (hasCF) {
+    c.customFolders.forEach((p, i) => {
+      const last = i === c.customFolders.length - 1;
+      add(`${last ? "└" : "├"}── ${p}/`);
+    });
+  }
   return t;
 }
 
@@ -451,6 +549,7 @@ function genLicense(c) {
 }
 
 function genMakefile(c) {
+  const md = projDirs(c), mn = scriptNames(c);
   const L = [
     "# ====================", "# Makefile",
     `# Project: ${c.name}`, `# Author:  ${c.author}`, `# Date:    ${c.date}`,
@@ -459,24 +558,24 @@ function genMakefile(c) {
     `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""} help`, "",
     `all: download clean_data model visualize${c.quarto ? " report" : ""}`, "",
     "# Run individual steps ----", "",
-    "download:", "\tRscript -e 'source(\"02_scripts/01_download_data.R\")'", "",
-    "clean_data:", "\tRscript -e 'source(\"02_scripts/02_clean_data.R\")'", "",
-    "model:", "\tRscript -e 'source(\"02_scripts/03_model_data.R\")'", "",
-    "visualize:", "\tRscript -e 'source(\"02_scripts/04_visualize_data.R\")'", "",
+    "download:", `\tRscript -e 'source("${md.scripts}/${mn.dl}")'`, "",
+    "clean_data:", `\tRscript -e 'source("${md.scripts}/${mn.cl}")'`, "",
+    "model:", `\tRscript -e 'source("${md.scripts}/${mn.mod}")'`, "",
+    "visualize:", `\tRscript -e 'source("${md.scripts}/${mn.viz}")'`, "",
   ];
-  if (c.quarto) L.push("report:", "\tquarto render 02_scripts/05_report_data.qmd", "");
+  if (c.quarto) L.push("report:", `\tquarto render ${md.scripts}/${mn.rpt}`, "");
   if (c.testthat) L.push("test:", "\tRscript -e 'testthat::test_dir(\"tests/testthat\")'", "");
   if (c.lintr) {
-    L.push("lint:", "\tRscript -e 'lintr::lint_dir(\"02_scripts\")'", "");
-    L.push("style:", "\tRscript -e 'styler::style_dir(\"02_scripts\")'", "");
+    L.push("lint:", `\tRscript -e 'lintr::lint_dir("${md.scripts}")'`, "");
+    L.push("style:", `\tRscript -e 'styler::style_dir("${md.scripts}")'`, "");
   }
   L.push(
     "# Helpers ----", "",
     "# Delete all outputs and cleaned data (raw data is preserved)",
     "clean:",
-    "\tRscript -e 'unlink(\"01_data/clean_data/*\")'",
-    "\tRscript -e 'unlink(\"03_outputs/figures/*\")'",
-    "\tRscript -e 'unlink(\"03_outputs/tables/*\")'",
+    `\tRscript -e 'unlink("${md.data}/clean_data/*")'`,
+    `\tRscript -e 'unlink("${md.outputs}/figures/*")'`,
+    `\tRscript -e 'unlink("${md.outputs}/tables/*")'`,
     "\t@echo \"Outputs cleared. Raw data preserved.\"", ""
   );
   if (c.renv) {
@@ -517,11 +616,14 @@ function genRunR(c) {
     `# Date:        ${c.date}`,
     "# =============================================================================",
     "",
+  ];
+  const rrd = projDirs(c), rrn = scriptNames(c);
+  L.push(
     "steps <- c(",
-    '  "02_scripts/01_download_data.R",',
-    '  "02_scripts/02_clean_data.R",',
-    '  "02_scripts/03_model_data.R",',
-    '  "02_scripts/04_visualize_data.R"',
+    `  "${rrd.scripts}/${rrn.dl}",`,
+    `  "${rrd.scripts}/${rrn.cl}",`,
+    `  "${rrd.scripts}/${rrn.mod}",`,
+    `  "${rrd.scripts}/${rrn.viz}"`,
     ")",
     "",
     "for (s in steps) {",
@@ -529,13 +631,14 @@ function genRunR(c) {
     "  source(here::here(s))",
     "}",
     "",
-  ];
-  if (c.quarto) L.push('quarto::quarto_render(here::here("02_scripts/05_report_data.qmd"))', "");
+  );
+  if (c.quarto) L.push(`quarto::quarto_render(here::here("${rrd.scripts}/${rrn.rpt}"))`, "");
   L.push('message("\\n[done] pipeline complete.")', "");
   return L.join("\n");
 }
 
 function genGitignore(c) {
+  const gd = projDirs(c);
   const L = [
     "# History files", ".Rhistory", ".Rapp.history", "",
     "# Session Data files", ".RData", ".RDataTmp", "",
@@ -546,7 +649,7 @@ function genGitignore(c) {
     "# Quarto", "/.quarto/", "*_files/", "",
     "# R Environment Variables (keep template, ignore real secrets)", ".Renviron.local", "",
     "# Outputs (uncomment to keep generated artefacts out of git)",
-    "# 03_outputs/figures/*", "# 03_outputs/tables/*", "",
+    `# ${gd.outputs}/figures/*`, `# ${gd.outputs}/tables/*`, "",
     "# renv library (the lockfile is committed; the library is not)",
     "renv/library/", "renv/staging/", "",
   ];
@@ -794,6 +897,7 @@ function genDataReadme(c) {
 }
 
 function genCI(c) {
+  const cid = projDirs(c), cin = scriptNames(c);
   const steps = [
     "name: pipeline", "",
     "on:",
@@ -830,7 +934,7 @@ function genCI(c) {
   steps.push(
     "      - name: Run pipeline",
     "        run: |",
-    '          Rscript -e \'source("02_scripts/02_clean_data.R")\'',
+    `          Rscript -e 'source("${cid.scripts}/${cin.cl}")'`,
     ""
   );
   return steps.join("\n");
@@ -839,19 +943,24 @@ function genCI(c) {
 /* ── assemble the file map ───────────────────────────────────────────── */
 function buildFiles(c) {
   const f = {};
+  const fd = projDirs(c), fn = scriptNames(c);
   f[`${c.slug}.Rproj`] = genRproj();
   f["config.R"] = genConfig(c);
   f["README.md"] = genReadme(c);
-  f["02_scripts/01_download_data.R"] = genDownloadScript(c);
-  f["02_scripts/02_clean_data.R"] = genCleanScript(c);
-  f["02_scripts/03_model_data.R"] = genModelScript(c);
-  f["02_scripts/04_visualize_data.R"] = genVizScript(c);
-  if (c.quarto) f["02_scripts/05_report_data.qmd"] = genQmd(c);
+  f[`${fd.scripts}/${fn.dl}`] = genDownloadScript(c);
+  f[`${fd.scripts}/${fn.cl}`] = genCleanScript(c);
+  f[`${fd.scripts}/${fn.mod}`] = genModelScript(c);
+  f[`${fd.scripts}/${fn.viz}`] = genVizScript(c);
+  if (c.quarto) f[`${fd.scripts}/${fn.rpt}`] = genQmd(c);
   // keep empty dirs in the zip
-  f["01_data/raw_data/.gitkeep"] = "";
-  f["01_data/clean_data/.gitkeep"] = "";
-  f["03_outputs/figures/.gitkeep"] = "";
-  f["03_outputs/tables/.gitkeep"] = "";
+  f[`${fd.data}/raw_data/.gitkeep`] = "";
+  f[`${fd.data}/clean_data/.gitkeep`] = "";
+  f[`${fd.outputs}/figures/.gitkeep`] = "";
+  f[`${fd.outputs}/tables/.gitkeep`] = "";
+
+  if (c.customFolders) {
+    c.customFolders.forEach((p) => { f[`${p}/.gitkeep`] = ""; });
+  }
 
   const lic = genLicense(c);
   if (lic) f["LICENSE"] = lic;
@@ -934,6 +1043,13 @@ function refreshPreview() {
   $("#crsFs").style.display = c.spatial ? "" : "none";
   $("#renvStep").style.display = c.renv ? "" : "none";
 
+  // update dynamic labels that reference generated names
+  const pn = scriptNames(c), pd = projDirs(c);
+  const scriptTab = document.getElementById("scriptTab");
+  if (scriptTab) scriptTab.textContent = `🧪 ${pn.cl}`;
+  const startStep = document.getElementById("startStep");
+  if (startStep) startStep.innerHTML = `Start with <code>${pd.scripts}/${pn.dl}</code> and work through the files in order.`;
+
   // reflect chip on/off state
   $$("#pkgGrid .pkg").forEach((el) => {
     el.classList.toggle("is-on", el.querySelector("input").checked);
@@ -968,6 +1084,7 @@ function applyPreset(name) {
   if (!p) return;
   $("#spatial").checked = p.spatial;
   $("#runner").value = p.runner;
+  if (p.numbering) { const el = document.getElementById("numbering"); if (el) el.value = p.numbering; }
   Object.entries(p.flags).forEach(([id, val]) => {
     const el = document.getElementById(id);
     if (el) el.checked = val;
@@ -1070,8 +1187,18 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#cfgForm").addEventListener("input", refreshPreview);
   $("#cfgForm").addEventListener("submit", (e) => { e.preventDefault(); downloadZip(); });
   $("#downloadBtn").addEventListener("click", downloadZip);
-  $("#resetBtn").addEventListener("click", () => { $("#cfgForm").reset(); renderPackages(); syncSpatialPackages(); $$(".preset").forEach((b) => b.classList.remove("is-active")); refreshPreview(); });
+  $("#resetBtn").addEventListener("click", () => {
+    $("#cfgForm").reset();
+    renderPackages();
+    syncSpatialPackages();
+    $$(".preset").forEach((b) => b.classList.remove("is-active"));
+    document.getElementById("customVarList").innerHTML = "";
+    document.getElementById("customFolderList").innerHTML = "";
+    refreshPreview();
+  });
   $$(".preset").forEach((b) => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
+  document.getElementById("addVarBtn").addEventListener("click", () => { addVarRow(); refreshPreview(); });
+  document.getElementById("addFolderBtn").addEventListener("click", () => { addFolderRow(); refreshPreview(); });
 
   refreshPreview();
 });

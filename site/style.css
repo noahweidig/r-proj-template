@@ -365,3 +365,33 @@ input::placeholder { color: var(--muted); }
   .topnav, .nav-toggle-bar, .btn { transition: none; }
   html { scroll-behavior: auto; }
 }
+
+/* ── custom variables / folders ──────────────────────────────────────── */
+.custom-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+
+.custom-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-row .remove-btn {
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px 9px;
+  font-size: .8rem;
+  line-height: 1;
+}
+
+.custom-row .remove-btn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+.add-row-btn { margin-top: 2px; }
