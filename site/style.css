@@ -60,9 +60,14 @@ body {
 /* sticky header shouldn't hide anchored sections when jumped to */
 #builder, #workflow { scroll-margin-top: 80px; }
 
-/* lock background scroll while the mobile drawer is open (position:fixed +
-   stored top keeps the page exactly where it was — no jump, no rubber-banding) */
-body.nav-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hidden; }
+/* lock background scroll while the mobile drawer is open.
+   IMPORTANT: do NOT lock with `position: fixed` on the body. The sticky .topbar
+   has a backdrop-filter, which makes it the containing block for the drawer and
+   overlay (both position:fixed). Shifting the body up by the scroll offset drags
+   that containing block off-screen, so the drawer opens near the top of the
+   document instead of in the viewport. overflow:hidden locks scrolling without
+   moving the body, keeping the drawer exactly where it belongs. */
+html.nav-open, body.nav-open { overflow: hidden; overscroll-behavior: none; }
 
 code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
@@ -146,6 +151,7 @@ html[data-theme="light"] .theme-toggle .ti-moon { opacity: 0; transform: rotate(
   position: fixed; inset: 0; z-index: 40;
   background: rgba(4,8,20,.55); backdrop-filter: blur(3px);
   opacity: 0; transition: opacity .28s ease;
+  touch-action: none; overscroll-behavior: contain;
 }
 .nav-overlay.is-open { opacity: 1; }
 
@@ -385,7 +391,11 @@ input::placeholder { color: var(--muted); }
     padding: 14px 14px; border-radius: 12px;
     color: var(--text);
   }
-  .topnav a:hover { background: var(--panel-2); text-decoration: none; }
+  /* only apply hover styling on devices that truly hover — on touch screens a
+     hover rule can swallow the first tap, forcing a second tap to activate. */
+  @media (hover: hover) {
+    .topnav a:hover { background: var(--panel-2); text-decoration: none; }
+  }
   .topnav a.is-active { background: color-mix(in srgb, var(--brand) 14%, transparent); }
   /* drop the desktop underline inside the drawer */
   .topnav a::after { display: none; }
