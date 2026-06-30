@@ -1,4 +1,4 @@
-# R Project Scaffolder
+# R Project Template
 
 A best-practice template for **reproducible R pipelines** — plus a gorgeous,
 zero-install web app that lets anyone name, configure, and download a ready-to-go
@@ -8,7 +8,7 @@ project as a zip.
 
 ## Two ways to use it
 
-### 1 · The web scaffolder (recommended)
+### 1 · The web template (recommended)
 
 Open the [site](https://noahweidig.github.io/r-proj-template/), fill in a few
 fields (project name, author, packages, CRS, renv/Quarto/Makefile toggles),
