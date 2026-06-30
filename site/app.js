@@ -1258,12 +1258,11 @@ function initNav() {
   const overlay = $("#navOverlay");
   if (!toggle || !nav) return;
 
-  let scrollY = 0;
+  const root = document.documentElement;
   const isOpen = () => document.body.classList.contains("nav-open");
 
   const open = () => {
     if (isOpen()) return;
-    scrollY = window.scrollY;
     nav.classList.add("is-open");
     toggle.classList.add("is-open");
     toggle.setAttribute("aria-expanded", "true");
@@ -1271,24 +1270,22 @@ function initNav() {
     overlay.hidden = false;
     // next frame so the opacity transition runs
     requestAnimationFrame(() => overlay.classList.add("is-open"));
-    // lock the page in place (position:fixed needs the stored offset)
-    document.body.style.top = `-${scrollY}px`;
+    // lock background scroll WITHOUT moving the body. position:fixed would drag
+    // the drawer's containing block (the backdrop-filtered .topbar) off-screen;
+    // overflow:hidden keeps the page — and the drawer — exactly where they are.
+    root.classList.add("nav-open");
     document.body.classList.add("nav-open");
   };
 
-  // close the drawer. restore=true puts the scroll position back (the page was
-  // pinned with position:fixed); pass false when an in-page anchor should drive
-  // the scroll instead so we don't fight it.
-  const close = (restore = true) => {
+  const close = () => {
     if (!isOpen()) return;
     nav.classList.remove("is-open");
     toggle.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open menu");
     overlay.classList.remove("is-open");
+    root.classList.remove("nav-open");
     document.body.classList.remove("nav-open");
-    document.body.style.top = "";
-    if (restore) window.scrollTo(0, scrollY);
     // hide the overlay only after it has faded out
     const hide = () => { if (!isOpen()) overlay.hidden = true; };
     overlay.addEventListener("transitionend", hide, { once: true });
@@ -1300,24 +1297,10 @@ function initNav() {
   toggle.addEventListener("click", toggleMenu);
   overlay.addEventListener("click", () => close());
 
-  // close after tapping a link. for same-page anchors, restore scroll first so
-  // the page isn't pinned at the top when position:fixed is removed, then let
-  // scrollIntoView drive the final position.
-  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => {
-    const href = a.getAttribute("href") || "";
-    if (href.startsWith("#")) {
-      const target = document.querySelector(href);
-      if (target) {
-        e.preventDefault();
-        close();
-        history.pushState(null, "", href);
-        requestAnimationFrame(() =>
-          target.scrollIntoView({ behavior: "smooth", block: "start" }));
-        return;
-      }
-    }
-    close();
-  }));
+  // close after tapping a link. the page is no longer pinned, so native anchor
+  // scrolling (scroll-behavior:smooth + scroll-margin-top in CSS) lands the
+  // section correctly — no manual scrollIntoView needed.
+  nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => close()));
 
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 
