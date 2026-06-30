@@ -1300,15 +1300,16 @@ function initNav() {
   toggle.addEventListener("click", toggleMenu);
   overlay.addEventListener("click", () => close());
 
-  // close after tapping a link. for same-page anchors, unlock first then drive
-  // the smooth scroll ourselves so the menu reliably collapses on selection.
+  // close after tapping a link. for same-page anchors, restore scroll first so
+  // the page isn't pinned at the top when position:fixed is removed, then let
+  // scrollIntoView drive the final position.
   nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => {
     const href = a.getAttribute("href") || "";
     if (href.startsWith("#")) {
       const target = document.querySelector(href);
       if (target) {
         e.preventDefault();
-        close(false);
+        close();
         history.pushState(null, "", href);
         requestAnimationFrame(() =>
           target.scrollIntoView({ behavior: "smooth", block: "start" }));
