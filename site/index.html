@@ -4,8 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>R Project Template — reproducible R projects in one click</title>
-  <meta name="description" content="Name and configure a reproducible R project, then download a ready-to-extract zip. Best-practice structure, renv, Quarto, Makefile, Docker, testthat, and a tidy pipeline." />
+  <meta name="description" content="Name and configure a reproducible R project, then download a ready-to-extract zip. Best-practice structure, renv, targets, Quarto, Makefile, Docker, Dev Containers, testthat, and a tidy pipeline — the one-stop shop for reproducible R research." />
   <meta name="color-scheme" content="dark light" />
+  <link rel="canonical" href="https://noahweidig.github.io/r-proj-template/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="R Project Template — reproducible R projects in one click" />
+  <meta property="og:description" content="Configure a best-practice, fully reproducible R project — renv, targets, Quarto, Docker, Dev Containers, CI — and download it as a zip. Nothing uploaded, everything runs in your browser." />
+  <meta property="og:url" content="https://noahweidig.github.io/r-proj-template/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="R Project Template — reproducible R projects in one click" />
+  <meta name="twitter:description" content="Configure and download a best-practice, fully reproducible R project skeleton. 100% client-side." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,6 +40,8 @@
     <nav id="topnav" class="topnav">
       <a href="#builder">Builder</a>
       <a href="#workflow">Workflow</a>
+      <a href="#options">All options</a>
+      <a href="#faq">FAQ</a>
       <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">GitHub ↗</a>
       <button id="themeToggle" class="theme-toggle" aria-label="Switch to light theme" aria-pressed="false" title="Toggle light / dark">
         <svg class="ti ti-sun" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -47,21 +58,23 @@
   <section class="hero">
     <div class="hero-glow"></div>
     <div class="hero-inner">
-      <span class="eyebrow">Reproducible by default</span>
+      <span class="eyebrow">The one-stop shop for reproducible R</span>
       <h1>Spin up a clean R project<br /><span class="grad">in one click.</span></h1>
       <p class="lede">
         Name it, configure it, download it. You get a best-practice project skeleton —
-        numbered pipeline, <code>config.R</code>, <code>renv</code>, Quarto report, Makefile,
-        Docker, and tests — zipped and ready to extract. No setup script to run.
+        numbered pipeline or a <code>targets</code> DAG, <code>config.R</code>, <code>renv</code>,
+        Quarto report, Makefile, Docker, Dev Containers, CI, and tests — zipped and ready to
+        extract. No setup script to run.
       </p>
       <div class="hero-cta">
         <a href="#builder" class="btn btn-primary btn-lg">Build my project →</a>
-        <a href="#workflow" class="btn btn-ghost btn-lg">See what's inside</a>
+        <a href="#options" class="btn btn-ghost btn-lg">See every option</a>
       </div>
       <div class="hero-badges">
         <span>✓ 100% in your browser</span>
         <span>✓ Nothing uploaded</span>
-        <span>✓ data.table + tidyverse + sf ready</span>
+        <span>✓ Save, export &amp; share your setup</span>
+        <span>✓ 25+ toggles, zero lock-in</span>
       </div>
     </div>
   </section>
@@ -80,6 +93,17 @@
             <button type="button" class="preset" data-preset="tabular">📊 Tabular</button>
             <button type="button" class="preset" data-preset="minimal">🪶 Minimal</button>
             <button type="button" class="preset" data-preset="full">🚀 Full repro</button>
+          </div>
+        </div>
+
+        <!-- save / share this exact setup -->
+        <div class="presets" role="group" aria-label="Save or share your setup">
+          <span class="presets-label">Save &amp; share this setup <small class="hint">(auto-saved in your browser)</small></span>
+          <div class="preset-row">
+            <button type="button" id="shareLinkBtn" class="btn btn-ghost btn-sm">🔗 Copy link</button>
+            <button type="button" id="exportCfgBtn" class="btn btn-ghost btn-sm">⭳ Export JSON</button>
+            <button type="button" id="importCfgBtn" class="btn btn-ghost btn-sm">⭱ Import JSON</button>
+            <input type="file" id="importCfgFile" accept="application/json" hidden />
           </div>
         </div>
 
@@ -216,6 +240,11 @@
               <span class="switch"></span>
               <span class="toggle-label">.Rprofile + .Renviron <small>sane session defaults</small></span>
             </label>
+            <label class="toggle compact">
+              <input id="useTargets" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">targets pipeline <small>_targets.R DAG + caching (recommended)</small></span>
+            </label>
           </div>
         </fieldset>
 
@@ -267,7 +296,24 @@
               <span class="switch"></span>
               <span class="toggle-label">Session log <small>capture sessionInfo() on each run</small></span>
             </label>
+            <label class="toggle compact">
+              <input id="useDevcontainer" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">Dev Container <small>one-click VS Code / Codespaces env</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useGhTemplates" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">GitHub templates <small>issue forms, PR template, Dependabot</small></span>
+            </label>
           </div>
+        </fieldset>
+
+        <fieldset class="fs">
+          <legend>Additional packages</legend>
+          <p class="hint">Any other CRAN/GitHub packages to <code>library()</code> in config.R (and install via renv/Docker).</p>
+          <div id="customPkgList" class="custom-list"></div>
+          <button type="button" id="addPkgBtn" class="btn btn-ghost btn-sm add-row-btn">+ Add package</button>
         </fieldset>
 
         <fieldset class="fs">
@@ -307,6 +353,8 @@
           <button class="tab" data-tab="config" role="tab">⚙️ config.R</button>
           <button class="tab" data-tab="readme" role="tab">📖 README.md</button>
           <button id="scriptTab" class="tab" data-tab="script" role="tab">🧪 02_clean_data.R</button>
+          <button class="tab" data-tab="pipeline" role="tab">🛠️ Pipeline</button>
+          <button class="tab" data-tab="container" role="tab">🐳 Container/CI</button>
         </div>
         <div class="tabpane is-active" data-pane="tree">
           <pre id="treeView" class="codeblock tree"></pre>
@@ -319,6 +367,12 @@
         </div>
         <div class="tabpane" data-pane="script">
           <pre id="scriptView" class="codeblock"></pre>
+        </div>
+        <div class="tabpane" data-pane="pipeline">
+          <pre id="pipelineView" class="codeblock"></pre>
+        </div>
+        <div class="tabpane" data-pane="container">
+          <pre id="containerView" class="codeblock"></pre>
         </div>
       </section>
     </div>
@@ -346,6 +400,10 @@
       <div class="feature"><span class="feat-ic">🎲</span><h3>Seeded</h3><p><code>set.seed()</code> wired into config so stochastic steps are deterministic.</p></div>
       <div class="feature"><span class="feat-ic">⚡</span><h3>data.table first</h3><p>Loaded before tidyverse so masking order is correct and joins stay fast.</p></div>
       <div class="feature"><span class="feat-ic">✅</span><h3>testthat + lint</h3><p>Optional test scaffold and a styler/lintr config to keep code clean.</p></div>
+      <div class="feature"><span class="feat-ic">🕸️</span><h3>targets DAG</h3><p>Optional <code>_targets.R</code> pipeline that skips steps whose inputs haven't changed.</p></div>
+      <div class="feature"><span class="feat-ic">🧰</span><h3>Dev Containers</h3><p>One-click, fully pinned VS Code / GitHub Codespaces environment.</p></div>
+      <div class="feature"><span class="feat-ic">💾</span><h3>Save &amp; share setups</h3><p>Your builder configuration autosaves, and can be exported or shared as a link.</p></div>
+      <div class="feature"><span class="feat-ic">🧩</span><h3>Fully customizable</h3><p>Custom packages, config variables, and folders — add anything the catalogue doesn't cover.</p></div>
     </div>
 
     <div class="next-card">
@@ -359,9 +417,87 @@
     </div>
   </section>
 
+  <section id="options" class="workflow">
+    <h2 class="section-title">Every option, at a glance</h2>
+    <p class="section-sub">A true one-stop shop — toggle any combination on or off, the preview and download update live.</p>
+
+    <div class="opt-groups">
+      <div class="opt-group">
+        <h3>Identity &amp; type</h3>
+        <table class="opt-table">
+          <tr><td>Project name / author / email / ORCID / description</td><td>Fill config.R, README, CITATION.cff, LICENSE, Zenodo metadata</td></tr>
+          <tr><td>Spatial project</td><td>Adds <code>sf</code>/<code>terra</code>/<code>leaflet</code> + CRS config</td></tr>
+          <tr><td>Core packages</td><td>15+ catalogue packages incl. <code>data.table</code>, <code>tidyverse</code>, <code>targets</code>-adjacent tools, <code>arrow</code>, <code>DBI</code>, <code>gt</code>, <code>plotly</code></td></tr>
+          <tr><td>Additional packages</td><td>Any CRAN/GitHub package not in the catalogue</td></tr>
+        </table>
+      </div>
+      <div class="opt-group">
+        <h3>Reproducibility &amp; tooling</h3>
+        <table class="opt-table">
+          <tr><td>Random seed / min R version</td><td><code>set.seed()</code> + version badge &amp; requirements</td></tr>
+          <tr><td>Numbering style</td><td>Padded / plain / alpha / upper / none prefixes on folders &amp; scripts</td></tr>
+          <tr><td>License</td><td>MIT, Apache-2.0, GPL-3.0, CC-BY-4.0, or none</td></tr>
+          <tr><td>Pipeline runner</td><td>Makefile, <code>run.R</code>, or both</td></tr>
+          <tr><td>targets pipeline</td><td><code>_targets.R</code> DAG with caching — skips unchanged steps</td></tr>
+          <tr><td>renv</td><td>Pinned, restorable package versions</td></tr>
+          <tr><td>Quarto report</td><td>Numbered <code>.qmd</code> report in HTML/PDF/Word</td></tr>
+          <tr><td>Git + CI</td><td><code>.gitignore</code> + GitHub Actions pipeline run on every push</td></tr>
+          <tr><td>.Rprofile + .Renviron</td><td>Sane session defaults + environment variable template</td></tr>
+        </table>
+      </div>
+      <div class="opt-group">
+        <h3>Extras</h3>
+        <table class="opt-table">
+          <tr><td>Dockerfile</td><td>Pinned rocker image, spatial system libs when needed</td></tr>
+          <tr><td>Dev Container</td><td>One-click VS Code / Codespaces environment</td></tr>
+          <tr><td>testthat</td><td><code>tests/</code> skeleton wired into Makefile / CI</td></tr>
+          <tr><td>Code style</td><td><code>.lintr</code> + styler config + <code>.editorconfig</code></td></tr>
+          <tr><td>pre-commit</td><td>Git hooks that lint &amp; format before every commit</td></tr>
+          <tr><td>GitHub templates</td><td>Issue forms, PR template, Dependabot</td></tr>
+          <tr><td>CITATION.cff</td><td>Machine-readable citation metadata</td></tr>
+          <tr><td>Zenodo archive</td><td><code>.zenodo.json</code> for an archival DOI</td></tr>
+          <tr><td>Data dictionary</td><td>Template CSV + a README for <code>01_data/</code></td></tr>
+          <tr><td>Community docs</td><td>CONTRIBUTING.md + Code of Conduct</td></tr>
+          <tr><td>Session log</td><td>Capture <code>sessionInfo()</code> on every run</td></tr>
+          <tr><td>Custom config variables / folders</td><td>Anything the template doesn't already cover</td></tr>
+        </table>
+      </div>
+      <div class="opt-group">
+        <h3>Save, export &amp; share</h3>
+        <table class="opt-table">
+          <tr><td>Autosave</td><td>Your setup persists in this browser between visits</td></tr>
+          <tr><td>Copy link</td><td>Share a URL that reopens the builder with your exact setup</td></tr>
+          <tr><td>Export / Import JSON</td><td>Save a setup to reuse across future projects</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="workflow">
+    <h2 class="section-title">FAQ</h2>
+    <div class="opt-groups">
+      <div class="opt-group">
+        <h3>Why is data.table loaded before tidyverse?</h3>
+        <p class="section-sub" style="margin:0">So dplyr's verbs win any naming conflicts (predictable masking) while data.table itself stays available and fast for heavy joins/aggregation.</p>
+      </div>
+      <div class="opt-group">
+        <h3>Makefile, run.R, or targets — which do I need?</h3>
+        <p class="section-sub" style="margin:0"><code>make all</code> and <code>Rscript run.R</code> always re-run every step. <code>targets::tar_make()</code> builds a dependency graph and only reruns steps whose inputs changed — pick it for anything beyond a quick script.</p>
+      </div>
+      <div class="opt-group">
+        <h3>renv, Docker, or Dev Containers?</h3>
+        <p class="section-sub" style="margin:0">They stack, not compete: renv pins <em>R packages</em>, Docker pins the <em>OS + R version</em> too, and a Dev Container wraps Docker with a ready-to-code VS Code/Codespaces setup. Use whichever matches how much environment drift you're worried about.</p>
+      </div>
+      <div class="opt-group">
+        <h3>Is anything ever uploaded?</h3>
+        <p class="section-sub" style="margin:0">No. The whole builder — form, preview, zip generation — runs client-side in your browser with JSZip. Export/share features write to your clipboard, disk, or the URL bar only.</p>
+      </div>
+    </div>
+  </section>
+
   <footer class="footer">
     <p>Built for reproducible research. Everything runs locally in your browser — your inputs never leave this page.</p>
-    <p class="muted">Template: <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">noahweidig/r-proj-template</a></p>
+    <p class="muted">Template: <a href="https://github.com/noahweidig/r-proj-template" target="_blank" rel="noopener">noahweidig/r-proj-template</a> · <a href="https://github.com/noahweidig/r-proj-template/issues" target="_blank" rel="noopener">Issues</a> · <a href="https://github.com/noahweidig/r-proj-template/blob/main/LICENSE" target="_blank" rel="noopener">License</a></p>
   </footer>
 
   <script src="app.js" defer></script>
