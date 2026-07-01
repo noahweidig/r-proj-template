@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://noahweidig.github.io/r-proj-template/sitemap.xml

@@ -58,7 +58,7 @@ body {
 }
 
 /* sticky header shouldn't hide anchored sections when jumped to */
-#builder, #workflow { scroll-margin-top: 80px; }
+#builder, #workflow, #options, #faq { scroll-margin-top: 80px; }
 
 /* lock background scroll while the mobile drawer is open */
 body.nav-open { overflow: hidden; overscroll-behavior: none; }
@@ -339,6 +339,17 @@ input::placeholder { color: var(--muted); }
   white-space: normal; overflow-wrap: anywhere; word-break: break-word;
   max-width: 100%;
 }
+
+/* ── options reference / FAQ ─────────────────────────────── */
+.opt-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.opt-group { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+.opt-group h3 { margin: 0 0 12px; font-size: 1.05rem; }
+.opt-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.opt-table td { padding: 7px 0; vertical-align: top; border-top: 1px solid var(--border); }
+.opt-table tr:first-child td { border-top: none; }
+.opt-table td:first-child { font-weight: 600; padding-right: 12px; }
+.opt-table td:last-child { color: var(--text-2); }
+.opt-table code { color: var(--brand); }
 
 /* ── footer ──────────────────────────────────────────────── */
 .footer { text-align: center; padding: 40px 24px; border-top: 1px solid var(--border); color: var(--text-2); }

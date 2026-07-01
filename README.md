@@ -1,8 +1,10 @@
 # R Project Template
 
-A best-practice template for **reproducible R pipelines** — plus a gorgeous,
-zero-install web app that lets anyone name, configure, and download a ready-to-go
-project as a zip.
+The one-stop shop for **reproducible R pipelines** — a gorgeous, zero-install
+web app that lets anyone name, configure, and download a ready-to-go project
+as a zip. 25+ toggles cover packages, pipeline style, containers, CI, and
+docs, so you can dial in exactly the amount of reproducibility rigor a
+project needs.
 
 > **Live site:** https://noahweidig.github.io/r-proj-template/
 
@@ -11,10 +13,14 @@ project as a zip.
 ### 1 · The web template (recommended)
 
 Open the [site](https://noahweidig.github.io/r-proj-template/), fill in a few
-fields (project name, author, packages, CRS, renv/Quarto/Makefile toggles),
-watch the live preview, and click **Download**. You get a zip containing a
-fully-configured project — no script to run. Everything happens in your
-browser; nothing is uploaded.
+fields (project name, author, packages, CRS, renv/targets/Quarto/Makefile/
+Docker/Dev Container toggles), watch the live preview across six tabs, and
+click **Download**. You get a zip containing a fully-configured project — no
+script to run. Everything happens in your browser; nothing is uploaded.
+
+Your setup autosaves in the browser, and can be exported to JSON, imported
+back in, or shared as a link so a whole team starts from the same
+configuration.
 
 ### 2 · `setup.R` (classic)
 
@@ -52,8 +58,15 @@ my-project/
 - **`renv`** — pin and restore exact package versions across machines.
 - **Seeded** — `set.seed()` wired into `config.R`.
 - **Numbered pipeline** — download → clean → model → visualize → report.
-- **Makefile** — one command to reproduce every output.
+- **`targets` (optional)** — a DAG pipeline (`_targets.R`) that skips steps whose inputs haven't changed.
+- **Makefile / `run.R`** — one command to reproduce every output.
+- **Docker / Dev Containers (optional)** — pin the OS + R version, or get a one-click VS Code / Codespaces environment.
 - **Optional CI** — a GitHub Action that runs the pipeline on push.
+- **GitHub templates (optional)** — issue forms, PR template, Dependabot.
+- Custom packages, config variables, and folders — extend beyond the built-in catalogue.
+
+See the site's [**All options**](https://noahweidig.github.io/r-proj-template/#options)
+section for the full list of toggles.
 
 ## Developing the site
 

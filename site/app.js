@@ -19,8 +19,16 @@ const PACKAGES = [
   { id: "glue",      label: "glue",      comment: "string interpolation" },
   { id: "fs",        label: "fs",        comment: "tidy file-system ops" },
   { id: "conflicted",label: "conflicted",comment: "force explicit conflict choices" },
+  { id: "future",    label: "future",    comment: "parallel/async evaluation" },
+  { id: "furrr",     label: "furrr",     comment: "parallel purrr::map()" },
+  { id: "arrow",     label: "arrow",     comment: "parquet / larger-than-RAM data" },
+  { id: "DBI",       label: "DBI",       comment: "database connections" },
+  { id: "gt",        label: "gt",        comment: "publication-ready tables" },
+  { id: "plotly",    label: "plotly",    comment: "interactive charts" },
+  { id: "checkmate", label: "checkmate", comment: "fast argument validation" },
   { id: "sf",        label: "sf",        comment: "vector spatial data",        spatial: true },
   { id: "terra",     label: "terra",     comment: "raster spatial data",        spatial: true },
+  { id: "leaflet",   label: "leaflet",   comment: "interactive web maps",       spatial: true },
 ];
 
 /* ── presets ─────────────────────────────────────────────────────────────
@@ -35,7 +43,8 @@ const PRESETS = {
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: false, useLintr: false,
              usePrecommit: false, useCitation: false, useDataDict: true,
-             useContributing: false, useZenodo: false, useSessionInfo: true },
+             useContributing: false, useZenodo: false, useSessionInfo: true,
+             useTargets: true, useDevcontainer: false, useGhTemplates: false },
     runner: "make",
   },
   tabular: {
@@ -45,7 +54,8 @@ const PRESETS = {
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: true, useLintr: true,
              usePrecommit: false, useCitation: false, useDataDict: true,
-             useContributing: false, useZenodo: false, useSessionInfo: true },
+             useContributing: false, useZenodo: false, useSessionInfo: true,
+             useTargets: true, useDevcontainer: false, useGhTemplates: false },
     runner: "make",
   },
   minimal: {
@@ -55,17 +65,19 @@ const PRESETS = {
     flags: { useRenv: false, useQuarto: false, useGithub: false, useRprofile: false,
              useDocker: false, useTestthat: false, useLintr: false,
              usePrecommit: false, useCitation: false, useDataDict: false,
-             useContributing: false, useZenodo: false, useSessionInfo: false },
+             useContributing: false, useZenodo: false, useSessionInfo: false,
+             useTargets: false, useDevcontainer: false, useGhTemplates: false },
     runner: "runr",
   },
   full: {
     spatial: false,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "glue", "fs", "conflicted"],
+    pkgs: ["here", "data.table", "tidyverse", "janitor", "glue", "fs", "conflicted", "future", "furrr"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: true, useTestthat: true, useLintr: true,
              usePrecommit: true, useCitation: true, useDataDict: true,
-             useContributing: true, useZenodo: true, useSessionInfo: true },
+             useContributing: true, useZenodo: true, useSessionInfo: true,
+             useTargets: true, useDevcontainer: true, useGhTemplates: true },
     runner: "both",
   },
 };
@@ -152,6 +164,97 @@ function readCustomFolders() {
     .filter(Boolean);
 }
 
+function addPkgRow(name = "", comment = "") {
+  const row = document.createElement("div");
+  row.className = "custom-row";
+  row.innerHTML =
+    `<input type="text" class="cp-name" placeholder="pkgname" value="${name.replace(/"/g,'&quot;')}" />` +
+    `<input type="text" class="cp-comment" placeholder="comment (optional)" value="${comment.replace(/"/g,'&quot;')}" />` +
+    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+  row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
+  row.querySelectorAll("input").forEach((i) => i.addEventListener("input", refreshPreview));
+  document.getElementById("customPkgList").appendChild(row);
+}
+
+function readCustomPackages() {
+  return $$(".custom-row", document.getElementById("customPkgList"))
+    .map((r) => ({
+      name:    r.querySelector(".cp-name").value.trim(),
+      comment: r.querySelector(".cp-comment").value.trim(),
+    }))
+    .filter((p) => p.name);
+}
+
+/* ── config persistence: localStorage, export/import, shareable link ────
+ * Captures raw form values (not derived fields like slug/date) so it can
+ * be written straight back into the inputs on restore.
+ * ----------------------------------------------------------------------- */
+const STATE_KEY = "rpt-config-v1";
+const TOGGLE_IDS = [
+  "useRenv", "useQuarto", "useGithub", "useRprofile", "useDocker", "useTestthat",
+  "useLintr", "usePrecommit", "useCitation", "useDataDict", "useContributing",
+  "useZenodo", "useSessionInfo", "useTargets", "useDevcontainer", "useGhTemplates",
+];
+const FIELD_IDS = [
+  "projName", "author", "email", "orcid", "description",
+  "crsProj", "crsGeo", "seed", "rversion", "numbering", "license", "runner", "quartoFmt",
+];
+
+function getFormState() {
+  const state = { spatial: $("#spatial").checked, pkgIds: $$("#pkgGrid input:checked").map((i) => i.value) };
+  FIELD_IDS.forEach((id) => { const el = document.getElementById(id); if (el) state[id] = el.value; });
+  TOGGLE_IDS.forEach((id) => { const el = document.getElementById(id); if (el) state[id] = el.checked; });
+  state.customVars    = readCustomVars();
+  state.customFolders = readCustomFolders();
+  state.customPkgs    = readCustomPackages();
+  return state;
+}
+
+function applyFormState(state) {
+  if (!state || typeof state !== "object") return;
+  if ("spatial" in state) $("#spatial").checked = !!state.spatial;
+  FIELD_IDS.forEach((id) => {
+    if (!(id in state)) return;
+    const el = document.getElementById(id);
+    if (el) el.value = state[id];
+  });
+  TOGGLE_IDS.forEach((id) => {
+    if (!(id in state)) return;
+    const el = document.getElementById(id);
+    if (el) el.checked = !!state[id];
+  });
+  if (Array.isArray(state.pkgIds)) {
+    $$("#pkgGrid input").forEach((i) => { i.checked = state.pkgIds.includes(i.value); });
+  }
+  syncSpatialPackages();
+  document.getElementById("customVarList").innerHTML = "";
+  document.getElementById("customFolderList").innerHTML = "";
+  document.getElementById("customPkgList").innerHTML = "";
+  (state.customVars || []).forEach((v) => addVarRow(v.name, v.value, v.comment));
+  (state.customFolders || []).forEach((p) => addFolderRow(p));
+  (state.customPkgs || []).forEach((p) => addPkgRow(p.name, p.comment));
+}
+
+function saveState(state) {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ }
+}
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function encodeStateForUrl(state) {
+  return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(state)))));
+}
+
+function decodeStateFromUrl(str) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(str))))); }
+  catch { return null; }
+}
+
 /* ── read the form into a config object ──────────────────────────────── */
 function readConfig() {
   const spatial = $("#spatial").checked;
@@ -190,9 +293,13 @@ function readConfig() {
     contributing:$("#useContributing").checked,
     zenodo:  $("#useZenodo").checked,
     sessioninfo:$("#useSessionInfo").checked,
+    targets: $("#useTargets").checked,
+    devcontainer: $("#useDevcontainer").checked,
+    ghTemplates:  $("#useGhTemplates").checked,
     date:       today(),
     customVars:    readCustomVars(),
     customFolders: readCustomFolders(),
+    customPkgs:    readCustomPackages(),
   };
 }
 
@@ -226,8 +333,10 @@ function genConfig(c) {
     "# Load order matters: data.table is loaded before tidyverse so that",
     "# masking is predictable (dplyr verbs win) and data.table stays fast.",
   ];
-  const w = Math.max(...c.pkgs.map((p) => p.label.length), 1);
+  const cp = c.customPkgs || [];
+  const w = Math.max(...c.pkgs.map((p) => p.label.length), ...cp.map((p) => p.name.length), 1);
   c.pkgs.forEach((p) => L.push(`library(${pad(p.label + ")", w + 1)}  # ${p.comment}`));
+  cp.forEach((p) => L.push(`library(${pad(p.name + ")", w + 1)}${p.comment ? `  # ${p.comment}` : ""}`));
 
   const hasConflicted = c.pkgs.some((p) => p.id === "conflicted");
   const hasTidy = c.pkgs.some((p) => p.id === "tidyverse");
@@ -426,7 +535,9 @@ function genReadme(c) {
   const badges = [];
   badges.push("![R](https://img.shields.io/badge/R-%E2%89%A5" + c.rver + "-276DC3?logo=r&logoColor=white)");
   if (c.renv)   badges.push("![renv](https://img.shields.io/badge/reproducible-renv-2C8E5A)");
+  if (c.targets) badges.push("![targets](https://img.shields.io/badge/pipeline-targets-8b7bff)");
   if (c.docker) badges.push("![Docker](https://img.shields.io/badge/container-Docker-2496ED?logo=docker&logoColor=white)");
+  if (c.devcontainer) badges.push("![Dev Container](https://img.shields.io/badge/Dev%20Container-VS%20Code-2C8E5A?logo=visualstudiocode)");
   if (c.license !== "none") badges.push(`![License](https://img.shields.io/badge/license-${encodeURIComponent(c.license)}-blue)`);
 
   const L = [
@@ -455,6 +566,10 @@ function genReadme(c) {
   if (c.quarto) L.push(`# Then render ${rn.rpt} in RStudio or via quarto::quarto_render()`);
   L.push("```", "");
   if (useRunR(c)) L.push("Or run everything at once:", "", "```sh", "Rscript run.R", "```", "");
+  if (c.targets) {
+    L.push("Or as a DAG that skips steps whose inputs haven't changed:", "",
+      "```r", "targets::tar_make()      # run the pipeline", "targets::tar_visnetwork() # inspect the dependency graph", "```", "");
+  }
   if (c.docker) {
     L.push("## Docker", "",
       "Build and run the whole project in a pinned container:", "",
@@ -463,10 +578,18 @@ function genReadme(c) {
       `docker run --rm -v "$(pwd)":/project ${c.slug} make all`,
       "```", "");
   }
+  if (c.devcontainer) {
+    L.push("## Dev Container", "",
+      "Open this folder in VS Code and choose **Reopen in Container** (or launch a",
+      "GitHub Codespace) for a fully pre-configured, reproducible R environment —",
+      "no local R install required.", "");
+  }
   L.push("## Requirements", "", `- R >= ${c.rver}`);
   if (c.quarto) L.push("- Quarto >= 1.3");
   if (c.renv)   L.push("- `renv` for package management (`renv::restore()` to install packages)");
+  if (c.targets) L.push("- `targets` (+ `tarchetypes` if using Quarto) for the DAG pipeline");
   if (c.docker) L.push("- Docker (optional, for the containerised workflow)");
+  if (c.devcontainer) L.push("- VS Code + Dev Containers extension, or GitHub Codespaces (optional)");
   L.push("", "## License", "");
   L.push(c.license === "none" ? "Unlicensed." : `${c.license} — see [LICENSE](LICENSE)`, "");
   return L.join("\n");
@@ -488,10 +611,23 @@ function buildTree(c, root) {
   if (c.rprofile) { add("├── .Rprofile                # session defaults / renv autoload"); add("├── .Renviron                # environment variables (template)"); }
   if (useMake(c)) add("├── Makefile                 # run the pipeline with `make`");
   if (useRunR(c)) add("├── run.R                    # run the whole pipeline with one Rscript");
+  if (c.targets) {
+    add("├── _targets.R               # DAG pipeline — run with targets::tar_make()");
+    add("├── R/");
+    add("│   └── functions.R          # pipeline step functions used by _targets.R");
+  }
   if (c.docker) add("├── Dockerfile               # pinned rocker image");
+  if (c.devcontainer) add("├── .devcontainer/devcontainer.json  # VS Code / Codespaces environment");
   if (c.lintr) { add("├── .lintr                   # lintr rules"); add("├── .editorconfig            # editor whitespace rules"); }
   if (c.precommit) add("├── .pre-commit-config.yaml  # git pre-commit hooks");
-  if (c.github) add("├── .gitignore");
+  if (c.github) { add("├── .gitignore"); add("├── .github/workflows/ci.yml # pipeline CI"); }
+  if (c.ghTemplates) {
+    add("├── .github/ISSUE_TEMPLATE/");
+    add("│   ├── bug_report.yml");
+    add("│   └── feature_request.yml");
+    add("├── .github/PULL_REQUEST_TEMPLATE.md");
+    add("├── .github/dependabot.yml");
+  }
   add(`├── ${td.data}/`);
   if (c.datadict) {
     add("│   ├── README.md            # what lives where + data dictionary");
@@ -569,7 +705,7 @@ function genMakefile(c) {
     `# Project: ${c.name}`, `# Author:  ${c.author}`, `# Date:    ${c.date}`,
     "# ====================", "",
     "# Default target — run the full pipeline",
-    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""}${c.sessioninfo ? " session" : ""} help`, "",
+    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""}${c.sessioninfo ? " session" : ""}${c.targets ? " pipeline" : ""} help`, "",
     `all: download clean_data model visualize${c.quarto ? " report" : ""}${c.sessioninfo ? " session" : ""}`, "",
     "# Run individual steps ----", "",
     "download:", `\tRscript -e 'source("${md.scripts}/${mn.dl}")'`, "",
@@ -600,6 +736,10 @@ function genMakefile(c) {
     L.push("session:",
       "\tRscript -e 'writeLines(capture.output(sessionInfo()), \"session-info.txt\")'", "");
   }
+  if (c.targets) {
+    L.push("# Run the DAG pipeline instead (skips steps whose inputs haven't changed)",
+      "pipeline:", "\tRscript -e 'targets::tar_make()'", "");
+  }
   L.push(
     "help:", "\t@echo \"\"", `\t@echo \"  ${c.name}\"`, "\t@echo \"\"",
     "\t@echo \"  Targets:\"",
@@ -616,6 +756,7 @@ function genMakefile(c) {
     L.push("\t@echo \"    make style        Auto-format scripts\"");
   }
   L.push("\t@echo \"    make clean        Delete outputs (raw data preserved)\"");
+  if (c.targets) L.push("\t@echo \"    make pipeline     Run the targets DAG (tar_make)\"");
   if (c.sessioninfo) L.push("\t@echo \"    make session      Write session-info.txt\"");
   if (c.renv) {
     L.push("\t@echo \"    make restore      Restore renv packages\"");
@@ -663,6 +804,110 @@ function genRunR(c) {
   return L.join("\n");
 }
 
+function genTargetsFunctions(c) {
+  const read = c.spatial
+    ? 'st_read(file.path(DATA_RAW, "data.geojson"))'
+    : 'fread(file.path(DATA_RAW, "data.csv"))';
+  const clean = c.spatial
+    ? ["    clean_names() |>", "    st_transform(CRS_PROJ)"]
+    : ["    clean_names()"];
+  const write = c.spatial
+    ? 'st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
+    : 'fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
+  const outFile = c.spatial ? "map.png" : "chart.png";
+  const plot = c.spatial
+    ? ["p <- ggplot(clean) +", "  geom_sf(aes(fill = variable)) +",
+       "  scale_fill_viridis_c() +", '  labs(title = "My Map", fill = "Value")']
+    : ["p <- ggplot(clean, aes(x = x, y = y)) +", "  geom_point() +",
+       '  labs(title = "My Chart")'];
+  return [
+    "# =============================================================================",
+    "# R/functions.R",
+    `# Project:     ${c.name}`,
+    "# Description: Pure(ish) functions used as targets in _targets.R. Each one",
+    "#              mirrors the matching 02_scripts/*.R step, but takes inputs",
+    "#              as arguments and returns a value instead of relying on globals.",
+    `# Author:      ${c.author}`,
+    `# Date:        ${c.date}`,
+    "# =============================================================================",
+    "",
+    "download_data <- function() {",
+    "  dest <- file.path(DATA_RAW, \"data.geojson\")",
+    "  # url <- \"https://example.com/data.geojson\"",
+    "  # download.file(url, dest, mode = \"wb\")",
+    "  if (!file.exists(dest)) file.create(dest) # placeholder until download logic is added",
+    "  dest",
+    "}",
+    "",
+    "clean_data <- function(raw_path) {",
+    `  # raw <- ${read}`,
+    "  # clean <- raw |>",
+    ...clean.map((l) => "  #" + l.slice(3)),
+    `  # ${write}`,
+    "  # clean",
+    "}",
+    "",
+    "model_data <- function(clean) {",
+    "  # results <- lm(y ~ x, data = clean)",
+    "  # results",
+    "}",
+    "",
+    "visualize_data <- function(clean) {",
+    "  # library(ggplot2)",
+    ...plot.map((l) => "  # " + l),
+    `  out <- file.path(OUT_FIGURES, "${outFile}")`,
+    "  # ggsave(out, p, width = 10, height = 7, dpi = 300)",
+    "  if (!file.exists(out)) file.create(out) # placeholder until plotting logic is added",
+    "  out",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function genTargetsFile(c) {
+  const s = scriptNames(c);
+  const pkgList = c.pkgs.map((p) => `"${p.label}"`)
+    .concat((c.customPkgs || []).map((p) => `"${p.name}"`))
+    .join(", ");
+  const L = [
+    "# =============================================================================",
+    "# _targets.R",
+    `# Project:     ${c.name}`,
+    "# Description: DAG-based reproducible pipeline. Run with targets::tar_make(),",
+    "#              inspect with targets::tar_visnetwork().",
+    `# Author:      ${c.author}`,
+    `# Date:        ${c.date}`,
+    "# =============================================================================",
+    "",
+    "library(targets)",
+  ];
+  if (c.quarto) L.push("library(tarchetypes) # tar_quarto()");
+  L.push(
+    "",
+    'source(here::here("config.R"))',
+    'source(here::here("R", "functions.R"))',
+    "",
+    "tar_option_set(",
+    `  packages = c(${pkgList}),`,
+    '  format = "rds"',
+    ")",
+    ""
+  );
+  const targets = [
+    'tar_target(raw_data, download_data(), format = "file")',
+    "tar_target(clean, clean_data(raw_data))",
+    "tar_target(model_fit, model_data(clean))",
+    'tar_target(figures, visualize_data(clean), format = "file")',
+  ];
+  if (c.quarto) {
+    targets.push(`tar_quarto(report, path = here::here("${projDirs(c).scripts}", "${s.rpt}"))`);
+  }
+  L.push("list(");
+  targets.forEach((t, i) => L.push(`  ${t}${i < targets.length - 1 ? "," : ""}`));
+  L.push(")", "");
+  return L.join("\n");
+}
+
 function genGitignore(c) {
   const gd = projDirs(c);
   const L = [
@@ -679,6 +924,7 @@ function genGitignore(c) {
     `# ${gd.outputs}/figures/*`, `# ${gd.outputs}/tables/*`, "",
     "# renv library (the lockfile is committed; the library is not)",
     "renv/library/", "renv/staging/", "",
+    ...(c.targets ? ["# targets pipeline cache (regenerated by tar_make())", "_targets/", "_targets_r/", ""] : []),
   ];
   return L.join("\n");
 }
@@ -775,20 +1021,23 @@ function genDockerfile(c) {
       ""
     );
   } else {
-    const ids = c.pkgs.map((p) => `'${p.label}'`).join(", ");
+    const ids = c.pkgs.map((p) => `'${p.label}'`)
+      .concat((c.customPkgs || []).map((p) => `'${p.name}'`))
+      .concat(c.targets ? ["'targets'", ...(c.quarto ? ["'tarchetypes'"] : [])] : [])
+      .join(", ");
     L.push(
       "# Install packages directly (no renv lockfile)",
       `RUN R -e "install.packages(c(${ids}), repos = 'https://cloud.r-project.org')"`,
       ""
     );
   }
-  L.push(
-    "COPY . .",
-    "",
-    `CMD ["${useMake(c) ? "make" : "Rscript"}", "${useMake(c) ? "all" : "run.R"}"]`,
-    ""
-  );
+  L.push("COPY . .", "", dockerCmd(c), "");
   return L.join("\n");
+}
+
+function dockerCmd(c) {
+  if (c.targets) return 'CMD ["Rscript", "-e", "targets::tar_make()"]';
+  return `CMD ["${useMake(c) ? "make" : "Rscript"}", "${useMake(c) ? "all" : "run.R"}"]`;
 }
 
 function genTestthatRunner() {
@@ -961,10 +1210,99 @@ function genCI(c) {
   steps.push(
     "      - name: Run pipeline",
     "        run: |",
-    `          Rscript -e 'source("${cid.scripts}/${cin.cl}")'`,
+    c.targets
+      ? "          Rscript -e 'targets::tar_make()'"
+      : `          Rscript -e 'source("${cid.scripts}/${cin.cl}")'`,
     ""
   );
   return steps.join("\n");
+}
+
+function genDevcontainer(c) {
+  const obj = {
+    name: c.name,
+    image: `ghcr.io/rocker-org/devcontainer/tidyverse:${c.rver}`,
+    postCreateCommand: "Rscript -e 'if (file.exists(\"renv.lock\")) renv::restore()'",
+    customizations: {
+      vscode: {
+        extensions: ["REditorSupport.r", "quarto.quarto"],
+      },
+    },
+  };
+  return JSON.stringify(obj, null, 2) + "\n";
+}
+
+function genGhIssueBug() {
+  return [
+    "name: Bug report",
+    "description: Something isn't working as expected",
+    "labels: [bug]",
+    "body:",
+    "  - type: textarea",
+    "    id: what-happened",
+    "    attributes:",
+    "      label: What happened?",
+    "      description: Also tell us what you expected to happen.",
+    "    validations:",
+    "      required: true",
+    "  - type: textarea",
+    "    id: repro",
+    "    attributes:",
+    "      label: Steps to reproduce",
+    "      description: Which script / target failed, and with what error?",
+    "  - type: input",
+    "    id: r-version",
+    "    attributes:",
+    "      label: R version (sessionInfo())",
+    "",
+  ].join("\n");
+}
+
+function genGhIssueFeature() {
+  return [
+    "name: Feature request",
+    "description: Suggest an idea for this project",
+    "labels: [enhancement]",
+    "body:",
+    "  - type: textarea",
+    "    id: problem",
+    "    attributes:",
+    "      label: What problem would this solve?",
+    "    validations:",
+    "      required: true",
+    "  - type: textarea",
+    "    id: proposal",
+    "    attributes:",
+    "      label: Proposed solution",
+    "",
+  ].join("\n");
+}
+
+function genGhPrTemplate() {
+  return [
+    "## What changed",
+    "",
+    "## Why",
+    "",
+    "## Checklist",
+    "",
+    "- [ ] Scripts still run in numbered order (`make all` / `tar_make()`)",
+    "- [ ] `renv::snapshot()` run if packages changed",
+    "- [ ] Docs / README updated if needed",
+    "",
+  ].join("\n");
+}
+
+function genDependabot() {
+  return [
+    "version: 2",
+    "updates:",
+    "  - package-ecosystem: \"github-actions\"",
+    "    directory: \"/\"",
+    "    schedule:",
+    "      interval: \"monthly\"",
+    "",
+  ].join("\n");
 }
 
 function genContributing(c) {
@@ -1083,6 +1421,17 @@ function buildFiles(c) {
     f[".gitignore"] = genGitignore(c);
     f[".github/workflows/ci.yml"] = genCI(c);
   }
+  if (c.targets) {
+    f["_targets.R"] = genTargetsFile(c);
+    f["R/functions.R"] = genTargetsFunctions(c);
+  }
+  if (c.devcontainer) f[".devcontainer/devcontainer.json"] = genDevcontainer(c);
+  if (c.ghTemplates) {
+    f[".github/ISSUE_TEMPLATE/bug_report.yml"] = genGhIssueBug();
+    f[".github/ISSUE_TEMPLATE/feature_request.yml"] = genGhIssueFeature();
+    f[".github/PULL_REQUEST_TEMPLATE.md"] = genGhPrTemplate();
+    f[".github/dependabot.yml"] = genDependabot();
+  }
   return f;
 }
 
@@ -1133,6 +1482,24 @@ function refreshPreview() {
   $("#configView").textContent = genConfig(c);
   $("#readmeView").textContent = genReadme(c);
   $("#scriptView").textContent = genCleanScript(c);
+
+  const pipelineParts = [];
+  if (c.targets) pipelineParts.push("# _targets.R\n" + genTargetsFile(c), "# R/functions.R\n" + genTargetsFunctions(c));
+  if (useMake(c)) pipelineParts.push("# Makefile\n" + genMakefile(c));
+  if (useRunR(c)) pipelineParts.push("# run.R\n" + genRunR(c));
+  $("#pipelineView").textContent = pipelineParts.length
+    ? pipelineParts.join("\n\n" + "─".repeat(60) + "\n\n")
+    : "No pipeline runner enabled — turn on targets, Makefile, or run.R.";
+
+  const containerParts = [];
+  if (c.docker) containerParts.push("# Dockerfile\n" + genDockerfile(c));
+  if (c.devcontainer) containerParts.push("# .devcontainer/devcontainer.json\n" + genDevcontainer(c));
+  if (c.github) containerParts.push("# .github/workflows/ci.yml\n" + genCI(c));
+  $("#containerView").textContent = containerParts.length
+    ? containerParts.join("\n\n" + "─".repeat(60) + "\n\n")
+    : "No container or CI options enabled — turn on Docker, Dev Container, or Git + CI.";
+
+  saveState(getFormState());
 
   // file count summary
   const n = Object.keys(buildFiles(c)).filter((p) => !p.endsWith(".gitkeep")).length;
@@ -1304,6 +1671,42 @@ function initNav() {
   }
 }
 
+/* ── config persistence UI ──────────────────────────────────────────── */
+function initPersistence() {
+  $("#shareLinkBtn").addEventListener("click", async () => {
+    const url = `${location.origin}${location.pathname}#cfg=${encodeStateForUrl(getFormState())}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = $("#shareLinkBtn"), old = btn.textContent;
+      btn.textContent = "✓ Link copied";
+      setTimeout(() => (btn.textContent = old), 1400);
+    } catch {
+      showError("Clipboard blocked by the browser — copy this URL manually: " + url);
+    }
+  });
+
+  $("#exportCfgBtn").addEventListener("click", () => {
+    const c = readConfig();
+    const blob = new Blob([JSON.stringify(getFormState(), null, 2)], { type: "application/json" });
+    saveAs(blob, `${c.slug || "r-project"}.config.json`);
+  });
+
+  $("#importCfgBtn").addEventListener("click", () => $("#importCfgFile").click());
+  $("#importCfgFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const state = JSON.parse(await file.text());
+      applyFormState(state);
+      $$(".preset").forEach((b) => b.classList.remove("is-active"));
+      refreshPreview();
+    } catch {
+      showError("Could not read that file — is it a config exported from this page?");
+    }
+    e.target.value = "";
+  });
+}
+
 /* ── boot ────────────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
   renderPackages();
@@ -1311,6 +1714,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initCopy();
   initTheme();
   initNav();
+  initPersistence();
+
+  // restore a previous setup: URL share link takes priority, then autosave
+  const hashMatch = location.hash.match(/cfg=([^&]+)/);
+  const restored = (hashMatch && decodeStateFromUrl(hashMatch[1])) || loadSavedState();
+  if (restored) applyFormState(restored);
 
   $("#spatial").addEventListener("change", () => { syncSpatialPackages(); refreshPreview(); });
   $("#cfgForm").addEventListener("input", refreshPreview);
@@ -1323,11 +1732,14 @@ document.addEventListener("DOMContentLoaded", () => {
     $$(".preset").forEach((b) => b.classList.remove("is-active"));
     document.getElementById("customVarList").innerHTML = "";
     document.getElementById("customFolderList").innerHTML = "";
+    document.getElementById("customPkgList").innerHTML = "";
+    try { localStorage.removeItem(STATE_KEY); } catch { /* storage unavailable */ }
     refreshPreview();
   });
   $$(".preset").forEach((b) => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
   document.getElementById("addVarBtn").addEventListener("click", () => { addVarRow(); refreshPreview(); });
   document.getElementById("addFolderBtn").addEventListener("click", () => { addFolderRow(); refreshPreview(); });
+  document.getElementById("addPkgBtn").addEventListener("click", () => { addPkgRow(); refreshPreview(); });
 
   refreshPreview();
 });
