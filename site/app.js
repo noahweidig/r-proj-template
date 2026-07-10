@@ -6,6 +6,19 @@
 
 "use strict";
 
+/* ── inline SVG icons (no emoji) ──────────────────────────────────────────
+ * Reused for JS-driven UI: dynamic tab label, copy feedback, remove buttons.
+ * ----------------------------------------------------------------------- */
+const SVG_ATTRS =
+  'class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+const FLASK_SVG =
+  `<svg ${SVG_ATTRS}><path d="M9 2h6"/><path d="M10 2v6.5L4.8 17.4A1 1 0 0 0 5.66 19h12.68a1 1 0 0 0 .86-1.6L14 8.5V2"/><path d="M7 15h10"/></svg>`;
+const CHECK_SVG =
+  `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+const X_SVG =
+  `<svg ${SVG_ATTRS}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
 /* ── package catalogue ────────────────────────────────────────────────────
  * Order matters: this is the order packages are written to config.R.
  * data.table is listed BEFORE tidyverse on purpose — loading data.table
@@ -131,7 +144,7 @@ function addVarRow(name = "", value = "", comment = "") {
     `<input type="text" class="cv-name"  placeholder="VAR_NAME" value="${name.replace(/"/g,'&quot;')}" />` +
     `<input type="text" class="cv-value" placeholder="value or &quot;string&quot;" value="${value.replace(/"/g,'&quot;')}" />` +
     `<input type="text" class="cv-comment" placeholder="comment (optional)" value="${comment.replace(/"/g,'&quot;')}" />` +
-    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+    `<button type="button" class="remove-btn" aria-label="Remove row">${X_SVG}</button>`;
   row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
   row.querySelectorAll("input").forEach((i) => i.addEventListener("input", refreshPreview));
   document.getElementById("customVarList").appendChild(row);
@@ -142,7 +155,7 @@ function addFolderRow(path = "") {
   row.className = "custom-row";
   row.innerHTML =
     `<input type="text" class="cf-path" placeholder="04_docs/notes" value="${path.replace(/"/g,'&quot;')}" />` +
-    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+    `<button type="button" class="remove-btn" aria-label="Remove row">${X_SVG}</button>`;
   row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
   row.querySelector("input").addEventListener("input", refreshPreview);
   document.getElementById("customFolderList").appendChild(row);
@@ -170,7 +183,7 @@ function addPkgRow(name = "", comment = "") {
   row.innerHTML =
     `<input type="text" class="cp-name" placeholder="pkgname" value="${name.replace(/"/g,'&quot;')}" />` +
     `<input type="text" class="cp-comment" placeholder="comment (optional)" value="${comment.replace(/"/g,'&quot;')}" />` +
-    `<button type="button" class="remove-btn" aria-label="Remove row">✕</button>`;
+    `<button type="button" class="remove-btn" aria-label="Remove row">${X_SVG}</button>`;
   row.querySelector(".remove-btn").addEventListener("click", () => { row.remove(); refreshPreview(); });
   row.querySelectorAll("input").forEach((i) => i.addEventListener("input", refreshPreview));
   document.getElementById("customPkgList").appendChild(row);
@@ -1309,7 +1322,7 @@ function genContributing(c) {
   const rd = projDirs(c);
   const L = [
     `# Contributing to ${c.name}`, "",
-    "Thanks for taking the time to contribute! 🎉", "",
+    "Thanks for taking the time to contribute!", "",
     "## Ground rules", "",
     "- Be respectful — this project follows the",
     "  [Contributor Covenant](CODE_OF_CONDUCT.md).",
@@ -1514,7 +1527,7 @@ function refreshPreview() {
   // update dynamic labels that reference generated names
   const pn = scriptNames(c), pd = projDirs(c);
   const scriptTab = document.getElementById("scriptTab");
-  if (scriptTab) scriptTab.textContent = `🧪 ${pn.cl}`;
+  if (scriptTab) scriptTab.innerHTML = `${FLASK_SVG} <span class="tab-label">${pn.cl}</span>`;
   const startStep = document.getElementById("startStep");
   if (startStep) startStep.innerHTML = `Start with <code>${pd.scripts}/${pn.dl}</code> and work through the files in order.`;
 
@@ -1588,9 +1601,9 @@ function initCopy() {
     if (!pane) return;
     try {
       await navigator.clipboard.writeText(pane.textContent);
-      const old = btn.textContent;
-      btn.textContent = "✓ Copied";
-      setTimeout(() => (btn.textContent = old), 1400);
+      const old = btn.innerHTML;
+      btn.innerHTML = `${CHECK_SVG} Copied`;
+      setTimeout(() => (btn.innerHTML = old), 1400);
     } catch {
       showError("Clipboard blocked by the browser — select and copy manually.");
     }
@@ -1677,9 +1690,9 @@ function initPersistence() {
     const url = `${location.origin}${location.pathname}#cfg=${encodeStateForUrl(getFormState())}`;
     try {
       await navigator.clipboard.writeText(url);
-      const btn = $("#shareLinkBtn"), old = btn.textContent;
-      btn.textContent = "✓ Link copied";
-      setTimeout(() => (btn.textContent = old), 1400);
+      const btn = $("#shareLinkBtn"), old = btn.innerHTML;
+      btn.innerHTML = `${CHECK_SVG} Link copied`;
+      setTimeout(() => (btn.innerHTML = old), 1400);
     } catch {
       showError("Clipboard blocked by the browser — copy this URL manually: " + url);
     }

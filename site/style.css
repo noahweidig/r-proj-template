@@ -92,7 +92,14 @@ a:hover { text-decoration: underline; }
 .brand { min-width: 0; }
 .brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
-.logo { font-size: 1.4rem; }
+.logo { font-size: 1.4rem; display: inline-flex; }
+/* inline SVG icons — inherit color + scale to surrounding text */
+.ic { width: 1em; height: 1em; display: inline-block; vertical-align: -.14em; flex: none; }
+.logo .ic { width: 1.4rem; height: 1.4rem; color: var(--brand); }
+.feat-ic .ic { width: 1.6rem; height: 1.6rem; }
+.preset .ic, .tab .ic, .copy-btn .ic, .btn .ic, .hero-badges .ic { margin-right: .1em; }
+.hero-badges .ic { color: var(--brand); vertical-align: -.16em; }
+.link-ic { width: .95em; height: .95em; vertical-align: -.06em; }
 .brand-name { letter-spacing: -.01em; }
 .brand-name strong { color: var(--brand); }
 .topnav { display: flex; align-items: center; gap: clamp(12px, 2vw, 26px); }
@@ -323,7 +330,7 @@ input::placeholder { color: var(--muted); }
 
 .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 56px; }
 .feature { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
-.feat-ic { font-size: 1.6rem; }
+.feat-ic { font-size: 1.6rem; display: inline-flex; color: var(--brand); }
 .feature h3 { margin: 12px 0 6px; font-size: 1.1rem; }
 .feature p { margin: 0; color: var(--text-2); font-size: .9rem; }
 .feature code { color: var(--brand); font-size: .85em; }
