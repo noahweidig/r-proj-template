@@ -33,7 +33,8 @@ writes the structure in place (and can initialise `renv`).
 ```
 my-project/
 ├── my-project.Rproj      # open this in RStudio
-├── config.R              # paths, CRS, theme, set.seed() — sourced everywhere
+├── R/
+│   └── config.R          # paths, CRS, theme, set.seed() — sourced everywhere
 ├── README.md
 ├── LICENSE
 ├── renv.lock             # pinned package versions (when renv enabled)
@@ -56,7 +57,7 @@ my-project/
 
 - **`here::here()`** paths — scripts run correctly from anywhere.
 - **`renv`** — pin and restore exact package versions across machines.
-- **Seeded** — `set.seed()` wired into `config.R`.
+- **Seeded** — `set.seed()` wired into `R/config.R`.
 - **Numbered pipeline** — download → clean → model → visualize → report.
 - **`targets` (optional)** — a DAG pipeline (`_targets.R`) that skips steps whose inputs haven't changed.
 - **Makefile / `run.R`** — one command to reproduce every output.

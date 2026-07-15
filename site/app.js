@@ -20,14 +20,13 @@ const X_SVG =
   `<svg ${SVG_ATTRS}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
 /* ── package catalogue ────────────────────────────────────────────────────
- * Order matters: this is the order packages are written to config.R.
- * data.table is listed BEFORE tidyverse on purpose — loading data.table
- * first keeps function masking predictable and joins fast.
+ * This is the order packages are written to config.R. `here` comes first so
+ * paths are available immediately; the rest are tidyverse-friendly by design.
  * ----------------------------------------------------------------------- */
 const PACKAGES = [
   { id: "here",      label: "here",      comment: "robust relative paths",      core: true  },
-  { id: "data.table",label: "data.table",comment: "fast tabular data (load 1st)", core: true },
   { id: "tidyverse", label: "tidyverse", comment: "data wrangling & plotting",  core: true  },
+  { id: "vroom",     label: "vroom",     comment: "fast tidy read/write of delimited files", core: true },
   { id: "janitor",   label: "janitor",   comment: "column name cleaning",       core: true  },
   { id: "glue",      label: "glue",      comment: "string interpolation" },
   { id: "fs",        label: "fs",        comment: "tidy file-system ops" },
@@ -36,8 +35,11 @@ const PACKAGES = [
   { id: "furrr",     label: "furrr",     comment: "parallel purrr::map()" },
   { id: "arrow",     label: "arrow",     comment: "parquet / larger-than-RAM data" },
   { id: "DBI",       label: "DBI",       comment: "database connections" },
+  { id: "googledrive",label:"googledrive",comment: "read/write files on Google Drive" },
   { id: "gt",        label: "gt",        comment: "publication-ready tables" },
   { id: "plotly",    label: "plotly",    comment: "interactive charts" },
+  { id: "patchwork", label: "patchwork", comment: "compose ggplots with + / |" },
+  { id: "cowplot",   label: "cowplot",   comment: "arrange & annotate ggplots" },
   { id: "checkmate", label: "checkmate", comment: "fast argument validation" },
   { id: "sf",        label: "sf",        comment: "vector spatial data",        spatial: true },
   { id: "terra",     label: "terra",     comment: "raster spatial data",        spatial: true },
@@ -52,7 +54,7 @@ const PRESETS = {
   spatial: {
     spatial: true,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "sf", "terra"],
+    pkgs: ["here", "tidyverse", "vroom", "janitor", "sf", "terra"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: false, useLintr: false,
              usePrecommit: false, useCitation: false, useDataDict: true,
@@ -63,7 +65,7 @@ const PRESETS = {
   tabular: {
     spatial: false,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "conflicted"],
+    pkgs: ["here", "tidyverse", "vroom", "janitor", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: false, useTestthat: true, useLintr: true,
              usePrecommit: false, useCitation: false, useDataDict: true,
@@ -74,7 +76,7 @@ const PRESETS = {
   minimal: {
     spatial: false,
     numbering: "none",
-    pkgs: ["here", "data.table"],
+    pkgs: ["here", "vroom"],
     flags: { useRenv: false, useQuarto: false, useGithub: false, useRprofile: false,
              useDocker: false, useTestthat: false, useLintr: false,
              usePrecommit: false, useCitation: false, useDataDict: false,
@@ -85,7 +87,7 @@ const PRESETS = {
   full: {
     spatial: false,
     numbering: "padded",
-    pkgs: ["here", "data.table", "tidyverse", "janitor", "glue", "fs", "conflicted", "future", "furrr"],
+    pkgs: ["here", "tidyverse", "vroom", "janitor", "glue", "fs", "conflicted", "future", "furrr"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
              useDocker: true, useTestthat: true, useLintr: true,
              usePrecommit: true, useCitation: true, useDataDict: true,
@@ -335,7 +337,7 @@ function genRproj() {
 function genConfig(c) {
   const L = [
     "# =============================================================================",
-    "# config.R",
+    "# R/config.R",
     `# Project:     ${c.name}`,
     "# Description: Universal project configuration — paths, constants, CRS, etc.",
     `# Author:      ${c.author}`,
@@ -343,8 +345,7 @@ function genConfig(c) {
     "# =============================================================================",
     "",
     "# Packages ----",
-    "# Load order matters: data.table is loaded before tidyverse so that",
-    "# masking is predictable (dplyr verbs win) and data.table stays fast.",
+    "# Loaded in order; `here` first so project paths are available immediately.",
   ];
   const cp = c.customPkgs || [];
   const w = Math.max(...c.pkgs.map((p) => p.label.length), ...cp.map((p) => p.name.length), 1);
@@ -353,7 +354,6 @@ function genConfig(c) {
 
   const hasConflicted = c.pkgs.some((p) => p.id === "conflicted");
   const hasTidy = c.pkgs.some((p) => p.id === "tidyverse");
-  const hasDT   = c.pkgs.some((p) => p.id === "data.table");
   if (hasConflicted) {
     L.push(
       "",
@@ -366,15 +366,8 @@ function genConfig(c) {
         'conflicts_prefer(dplyr::lag)',
         'conflicts_prefer(dplyr::select)'
       );
-      if (hasDT) {
-        L.push(
-          'conflicts_prefer(dplyr::between)',
-          'conflicts_prefer(dplyr::first)',
-          'conflicts_prefer(dplyr::last)'
-        );
-      }
     } else {
-      L.push("# e.g. conflicts_prefer(data.table::first)");
+      L.push("# e.g. conflicts_prefer(stats::filter)");
     }
   }
   const d = projDirs(c);
@@ -427,7 +420,7 @@ function rHeader(c, filename, description) {
     `# Date:        ${c.date}`,
     "# =============================================================================",
     "",
-    'source(here::here("config.R"))',
+    'source(here::here("R", "config.R"))',
     "",
   ];
 }
@@ -449,13 +442,13 @@ function genCleanScript(c) {
   const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
     ? '# raw <- st_read(file.path(DATA_RAW, "data.geojson"))'
-    : '# raw <- fread(file.path(DATA_RAW, "data.csv"))';
+    : '# raw <- vroom(file.path(DATA_RAW, "data.csv"))';
   const clean = c.spatial
     ? ["# clean <- raw |>", "#   clean_names() |>", "#   st_transform(CRS_PROJ)"]
     : ["# clean <- raw |>", "#   clean_names()"];
   const write = c.spatial
     ? '# st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
-    : '# fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
+    : '# vroom_write(clean, file.path(DATA_CLEAN, "data_clean.csv"), delim = ",")';
   return rHeader(c, s.cl, `Read raw data, clean/transform, write to ${d.data}/clean_data/`).concat([
     "# Read ----", "", read, "",
     "# Clean ----", "", ...clean, "",
@@ -467,7 +460,7 @@ function genModelScript(c) {
   const s = scriptNames(c);
   const read = c.spatial
     ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-    : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))';
+    : '# clean <- vroom(file.path(DATA_CLEAN, "data_clean.csv"))';
   return rHeader(c, s.mod, "Model / analyse cleaned data").concat([
     "# Read ----", "", read, "",
     "# Model ----", "", "# results <- lm(y ~ x, data = clean)", "# summary(results)", "",
@@ -479,7 +472,7 @@ function genVizScript(c) {
   const s = scriptNames(c), d = projDirs(c);
   const read = c.spatial
     ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-    : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))';
+    : '# clean <- vroom(file.path(DATA_CLEAN, "data_clean.csv"))';
   const plot = c.spatial
     ? ["# p <- ggplot(clean) +", "#   geom_sf(aes(fill = variable)) +",
        "#   scale_fill_viridis_c() +", '#   labs(title = "My Map", fill = "Value")']
@@ -521,7 +514,7 @@ function genQmd(c) {
     "",
     "```{r setup}",
     "#| include: false",
-    'source(here::here("config.R"))',
+    'source(here::here("R", "config.R"))',
     "```",
     "",
     "## Introduction",
@@ -532,7 +525,7 @@ function genQmd(c) {
     "```{r load-data}",
     c.spatial
       ? '# clean <- st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-      : '# clean <- fread(file.path(DATA_CLEAN, "data_clean.csv"))',
+      : '# clean <- vroom(file.path(DATA_CLEAN, "data_clean.csv"))',
     "```",
     "",
     "## Results", "", "```{r results}", "# Your analysis output here", "```",
@@ -614,7 +607,13 @@ function buildTree(c, root) {
   const add = (line) => t.push(line);
   const td = projDirs(c), tn = scriptNames(c);
   add(`├── ${c.slug}.Rproj          # RStudio project file (open this to launch)`);
-  add("├── config.R                 # Universal config: paths, CRS, theme");
+  add("├── R/");
+  if (c.targets) {
+    add("│   ├── config.R             # Universal config: paths, CRS, theme");
+    add("│   └── functions.R          # pipeline step functions used by _targets.R");
+  } else {
+    add("│   └── config.R             # Universal config: paths, CRS, theme");
+  }
   add("├── README.md");
   if (c.license !== "none") add("├── LICENSE");
   if (c.contributing) { add("├── CONTRIBUTING.md          # how to contribute"); add("├── CODE_OF_CONDUCT.md"); }
@@ -626,8 +625,6 @@ function buildTree(c, root) {
   if (useRunR(c)) add("├── run.R                    # run the whole pipeline with one Rscript");
   if (c.targets) {
     add("├── _targets.R               # DAG pipeline — run with targets::tar_make()");
-    add("├── R/");
-    add("│   └── functions.R          # pipeline step functions used by _targets.R");
   }
   if (c.docker) add("├── Dockerfile               # pinned rocker image");
   if (c.devcontainer) add("├── .devcontainer/devcontainer.json  # VS Code / Codespaces environment");
@@ -820,13 +817,13 @@ function genRunR(c) {
 function genTargetsFunctions(c) {
   const read = c.spatial
     ? 'st_read(file.path(DATA_RAW, "data.geojson"))'
-    : 'fread(file.path(DATA_RAW, "data.csv"))';
+    : 'vroom(file.path(DATA_RAW, "data.csv"))';
   const clean = c.spatial
     ? ["    clean_names() |>", "    st_transform(CRS_PROJ)"]
     : ["    clean_names()"];
   const write = c.spatial
     ? 'st_write(clean, file.path(DATA_CLEAN, "data_clean.gpkg"), delete_dsn = TRUE)'
-    : 'fwrite(clean, file.path(DATA_CLEAN, "data_clean.csv"))';
+    : 'vroom_write(clean, file.path(DATA_CLEAN, "data_clean.csv"), delim = ",")';
   const outFile = c.spatial ? "map.png" : "chart.png";
   const plot = c.spatial
     ? ["p <- ggplot(clean) +", "  geom_sf(aes(fill = variable)) +",
@@ -897,7 +894,7 @@ function genTargetsFile(c) {
   if (c.quarto) L.push("library(tarchetypes) # tar_quarto()");
   L.push(
     "",
-    'source(here::here("config.R"))',
+    'source(here::here("R", "config.R"))',
     'source(here::here("R", "functions.R"))',
     "",
     "tar_option_set(",
@@ -998,8 +995,8 @@ function genRenviron(c) {
     "# DATA_API_KEY=replace-me",
     "# AWS_DEFAULT_REGION=us-east-1",
     "",
-    "# Use more cores for data.table by default (0 = all available)",
-    "# R_DATATABLE_NUM_THREADS=0",
+    "# Grow vroom's read buffer for very wide/awkward files if needed",
+    "# VROOM_CONNECTION_SIZE=500000",
     "",
   ].join("\n");
 }
@@ -1070,7 +1067,7 @@ function genTestthatTest(c) {
     'test_that("cleaned data has no duplicate rows", {',
     "  # clean <- " + (c.spatial
       ? 'st_read(file.path(DATA_CLEAN, "data_clean.gpkg"))'
-      : 'fread(file.path(DATA_CLEAN, "data_clean.csv"))') + "",
+      : 'vroom(file.path(DATA_CLEAN, "data_clean.csv"))') + "",
     "  # expect_equal(anyDuplicated(clean), 0)",
     "  expect_true(TRUE)  # replace with a real assertion",
     "})",
@@ -1330,7 +1327,7 @@ function genContributing(c) {
     "", "## Getting set up", "", "```r",
   ];
   if (c.renv) L.push("renv::restore()   # install the pinned package versions");
-  else        L.push('# install.packages(c(...))  # see config.R for required packages');
+  else        L.push('# install.packages(c(...))  # see R/config.R for required packages');
   L.push("```", "", "## Workflow", "",
     `Scripts live in \`${rd.scripts}/\` and run in numbered order — keep that order intact.`,
     "Raw data is never edited by hand; regenerate cleaned data from the scripts.", "");
@@ -1390,7 +1387,7 @@ function buildFiles(c) {
   const f = {};
   const fd = projDirs(c), fn = scriptNames(c);
   f[`${c.slug}.Rproj`] = genRproj();
-  f["config.R"] = genConfig(c);
+  f["R/config.R"] = genConfig(c);
   f["README.md"] = genReadme(c);
   f[`${fd.scripts}/${fn.dl}`] = genDownloadScript(c);
   f[`${fd.scripts}/${fn.cl}`] = genCleanScript(c);

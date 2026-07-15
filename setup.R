@@ -103,6 +103,7 @@ write_file <- function(path, content) {
 # 1. Directory structure ----
 
 dirs <- c(
+  "R",
   file.path(data_dir, "raw_data"),
   file.path(data_dir, "clean_data"),
   scripts_dir,
@@ -148,13 +149,13 @@ rproj_content <- c(
 
 write_file(rproj_path, rproj_content)
 
-# 3. config.R ----
+# 3. R/config.R ----
 
-message("\n Writing config.R ----")
+message("\n Writing R/config.R ----")
 
 config_content <- c(
   "# =============================================================================",
-  "# config.R",
+  "# R/config.R",
   paste0("# Project:     ", proj_name),
   "# Description: Universal project configuration — paths, constants, CRS, etc.",
   paste0("# Author:      ", proj_author),
@@ -162,11 +163,10 @@ config_content <- c(
   "# =============================================================================",
   "",
   "# Packages ----",
-  "# Load order matters: data.table is loaded before tidyverse so that",
-  "# masking is predictable (dplyr verbs win) and data.table stays fast.",
+  "# Loaded in order; `here` first so project paths are available immediately.",
   "library(here)       # robust relative paths",
-  "library(data.table) # fast tabular data (load before tidyverse)",
   "library(tidyverse)  # data wrangling & plotting",
+  "library(vroom)      # fast tidy read/write of delimited files",
   "library(janitor)    # column name cleaning",
   "library(sf)         # vector spatial data",
   "library(terra)      # raster spatial data",
@@ -191,7 +191,7 @@ config_content <- c(
   ""
 )
 
-write_file("config.R", config_content)
+write_file(file.path("R", "config.R"), config_content)
 
 # 4. Analysis scripts 
 
@@ -208,7 +208,7 @@ r_header <- function(filename, description) {
     paste0("# Date:        ", today),
     "# =============================================================================",
     "",
-    'source(here::here("config.R"))',
+    'source(here::here("R", "config.R"))',
     ""
   )
 }
@@ -320,7 +320,7 @@ qmd_content <- c(
   "",
   "```{r setup}",
   '#| include: false',
-  'source(here::here("config.R"))',
+  'source(here::here("R", "config.R"))',
   "```",
   "",
   "## Introduction",
@@ -368,7 +368,8 @@ readme_content <- c(
   "```",
   ".",
   paste0("├── ", rproj_name, ".Rproj          # RStudio project file (open this to launch)"),
-  "├── config.R                        # Universal config: paths, CRS, theme",
+  "├── R/",
+  "│   └── config.R                    # Universal config: paths, CRS, theme",
   "├── Setup.R                         # This scaffolding script (run once)",
   "├── README.md",
   "├── LICENSE",
@@ -538,7 +539,7 @@ message(sprintf("
 
  Next steps:
    1. Close this session and reopen via %s.Rproj
-   2. Review / extend config.R (CRS, packages, constants)
+   2. Review / extend R/config.R (CRS, packages, constants)
    3. Install your packages, then run:  renv::snapshot()
    4. Start with 02_scripts/01_download_data.R
 
