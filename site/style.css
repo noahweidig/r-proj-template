@@ -274,7 +274,7 @@ input::placeholder { color: var(--muted); }
 
 /* package grid */
 .pkg-field > span { font-weight: 600; font-size: .9rem; color: var(--text-2); display: block; margin-bottom: 8px; }
-.pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
 .pkg {
   display: flex; align-items: center; gap: 8px; padding: 9px 11px; cursor: pointer;
   background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--radius-sm);
@@ -284,7 +284,7 @@ input::placeholder { color: var(--muted); }
 .pkg:hover { border-color: var(--brand); }
 .pkg input { accent-color: var(--brand); width: 16px; height: 16px; flex-shrink: 0; }
 .pkg.is-on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, var(--bg-2)); }
-.pkg code { font-size: .85rem; min-width: 0; overflow-wrap: anywhere; }
+.pkg code { font-size: .85rem; white-space: nowrap; }
 
 .form-actions { padding: 8px 22px 22px; }
 .form-error { color: var(--danger); font-size: .88rem; margin: 12px 0 0; min-height: 1em; font-weight: 500; }
@@ -443,7 +443,7 @@ input::placeholder { color: var(--muted); }
   .codeblock { font-size: .74rem; padding: 14px; max-height: 60vh; }
   /* 16px inputs stop iOS Safari from auto-zooming on focus */
   input[type="text"], input[type="number"], input[type="email"], select { font-size: 16px; }
-  .pkg-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .pkg-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .flow-step { max-width: none; }
   .next-card { border-radius: 0; border-left: none; border-right: none; padding: 24px 18px; }
 }
