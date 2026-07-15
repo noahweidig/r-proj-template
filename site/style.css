@@ -202,6 +202,12 @@ html[data-theme="light"] .theme-toggle .ti-moon { opacity: 0; transform: rotate(
 .btn-ghost:hover { background: var(--panel-2); }
 .btn-icon { font-size: 1.1em; }
 .btn:disabled { opacity: .55; cursor: progress; transform: none; }
+/* When the download button gets too narrow (small screens / long project
+   names), drop the label and show just the icon so it never overflows. */
+@media (max-width: 400px) {
+  #downloadBtn .btn-text { display: none; }
+  #downloadBtn { gap: 0; }
+}
 
 /* ── builder layout ──────────────────────────────────────── */
 .builder { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 40px); }

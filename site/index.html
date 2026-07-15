@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1020'/%3E%3Cg fill='none' stroke='%236ee7ff' stroke-width='7' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M50 24 78 38 78 66 50 80 22 66 22 38Z'/%3E%3Cpath d='M22 38 50 52 78 38'/%3E%3Cpath d='M50 52 50 80'/%3E%3C/g%3E%3C/svg%3E" />
 
   <!-- zip generation, all client-side, vendored (no external requests) -->
   <script src="vendor/jszip.min.js" defer></script>
@@ -143,7 +143,7 @@
           </label>
 
           <div class="field pkg-field">
-            <span>Core packages <small class="hint">data.table is always loaded before tidyverse</small></span>
+            <span>Core packages <small class="hint">tidyverse-first, with vroom for fast file I/O</small></span>
             <div id="pkgGrid" class="pkg-grid"></div>
           </div>
         </fieldset>
@@ -331,8 +331,8 @@
         </fieldset>
 
         <div class="form-actions">
-          <button id="downloadBtn" type="button" class="btn btn-primary btn-lg btn-block">
-            <span class="btn-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Download <span id="dlName">project</span>.zip
+          <button id="downloadBtn" type="button" class="btn btn-primary btn-lg btn-block" aria-label="Download project zip">
+            <span class="btn-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="btn-text">Download <span id="dlName">project</span>.zip</span>
           </button>
           <div class="action-row">
             <button id="resetBtn" type="button" class="btn btn-ghost btn-sm">Reset</button>
@@ -398,7 +398,7 @@
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><h3>renv lockfile</h3><p>Pin every package version so collaborators get the exact same environment.</p></div>
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.3-.9.9-.9 1.5v6.6c0 .5.4 1.1.8 1.4l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-.9.9-1.5z"/><path d="M10 21.9V14L2.1 9.1"/><path d="M10 14l11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/></svg></span><h3>Docker option</h3><p>Pin the whole OS + R version with a rocker-based image for total reproducibility.</p></div>
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none"/></svg></span><h3>Seeded</h3><p><code>set.seed()</code> wired into config so stochastic steps are deterministic.</p></div>
-      <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><h3>data.table first</h3><p>Loaded before tidyverse so masking order is correct and joins stay fast.</p></div>
+      <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><h3>Fast, tidy I/O</h3><p>Tidyverse-first, with <code>vroom</code> for fast reads/writes of delimited data.</p></div>
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span><h3>testthat + lint</h3><p>Optional test scaffold and a styler/lintr config to keep code clean.</p></div>
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span><h3>targets DAG</h3><p>Optional <code>_targets.R</code> pipeline that skips steps whose inputs haven't changed.</p></div>
       <div class="feature"><span class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M2 13h20"/><path d="M9 13v2"/><path d="M15 13v2"/></svg></span><h3>Dev Containers</h3><p>One-click, fully pinned VS Code / GitHub Codespaces environment.</p></div>
@@ -427,7 +427,7 @@
         <table class="opt-table">
           <tr><td>Project name / author / email / ORCID / description</td><td>Fill config.R, README, CITATION.cff, LICENSE, Zenodo metadata</td></tr>
           <tr><td>Spatial project</td><td>Adds <code>sf</code>/<code>terra</code>/<code>leaflet</code> + CRS config</td></tr>
-          <tr><td>Core packages</td><td>15+ catalogue packages incl. <code>data.table</code>, <code>tidyverse</code>, <code>targets</code>-adjacent tools, <code>arrow</code>, <code>DBI</code>, <code>gt</code>, <code>plotly</code></td></tr>
+          <tr><td>Core packages</td><td>18+ catalogue packages incl. <code>tidyverse</code>, <code>vroom</code>, <code>arrow</code>, <code>DBI</code>, <code>googledrive</code>, <code>gt</code>, <code>plotly</code>, <code>patchwork</code>, <code>cowplot</code></td></tr>
           <tr><td>Additional packages</td><td>Any CRAN/GitHub package not in the catalogue</td></tr>
         </table>
       </div>
@@ -477,8 +477,8 @@
     <h2 class="section-title">FAQ</h2>
     <div class="opt-groups">
       <div class="opt-group">
-        <h3>Why is data.table loaded before tidyverse?</h3>
-        <p class="section-sub" style="margin:0">So dplyr's verbs win any naming conflicts (predictable masking) while data.table itself stays available and fast for heavy joins/aggregation.</p>
+        <h3>Which packages handle reading and writing data?</h3>
+        <p class="section-sub" style="margin:0">The core set is tidyverse-first. <code>vroom</code> is included for fast, tidy reading and writing of delimited files (it returns a tibble and plays nicely with dplyr), and <code>conflicted</code> can be toggled on to make any ambiguous function calls explicit.</p>
       </div>
       <div class="opt-group">
         <h3>Makefile, run.R, or targets — which do I need?</h3>
