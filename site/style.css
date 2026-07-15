@@ -202,11 +202,9 @@ html[data-theme="light"] .theme-toggle .ti-moon { opacity: 0; transform: rotate(
 .btn-ghost:hover { background: var(--panel-2); }
 .btn-icon { font-size: 1.1em; }
 .btn:disabled { opacity: .55; cursor: progress; transform: none; }
-/* When the download button gets too narrow (small screens / long project
-   names), drop the label and show just the icon so it never overflows. */
+/* At narrow widths, show just the icon and "Download" text */
 @media (max-width: 400px) {
-  #downloadBtn .btn-text { display: none; }
-  #downloadBtn { gap: 0; }
+  #downloadBtn .hidden-narrow { display: none; }
 }
 
 /* ── builder layout ──────────────────────────────────────── */
