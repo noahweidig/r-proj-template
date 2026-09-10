@@ -207,7 +207,7 @@ function readCustomPackages() {
 const STATE_KEY = "rpt-config-v1";
 const TOGGLE_IDS = [
   "useRenv", "useQuarto", "useGithub", "useRprofile", "useDocker", "useTestthat",
-  "useLintr", "usePrecommit", "useCitation", "useDataDict", "useContributing",
+  "useLintr", "useAirPersistentLineBreaks", "usePrecommit", "useCitation", "useDataDict", "useContributing",
   "useZenodo", "useSessionInfo", "useTargets", "useDevcontainer", "useGhTemplates",
 ];
 const FIELD_IDS = [
@@ -302,6 +302,7 @@ function readConfig() {
     docker:  $("#useDocker").checked,
     testthat:$("#useTestthat").checked,
     lintr:   $("#useLintr").checked,
+    airPersistentLineBreaks: $("#useAirPersistentLineBreaks").checked,
     precommit:$("#usePrecommit").checked,
     citation:$("#useCitation").checked,
     datadict:$("#useDataDict").checked,
@@ -628,7 +629,7 @@ function buildTree(c, root) {
   }
   if (c.docker) add("├── Dockerfile               # pinned rocker image");
   if (c.devcontainer) add("├── .devcontainer/devcontainer.json  # VS Code / Codespaces environment");
-  if (c.lintr) { add("├── .lintr                   # lintr rules"); add("├── .editorconfig            # editor whitespace rules"); }
+  if (c.lintr) { add("├── .lintr                   # lintr rules"); add("├── air.toml                 # air formatter config"); add("├── .editorconfig            # editor whitespace rules"); }
   if (c.precommit) add("├── .pre-commit-config.yaml  # git pre-commit hooks");
   if (c.github) { add("├── .gitignore"); add("├── .github/workflows/ci.yml # pipeline CI"); }
   if (c.ghTemplates) {
@@ -727,7 +728,7 @@ function genMakefile(c) {
   if (c.testthat) L.push("test:", "\tRscript -e 'testthat::test_dir(\"tests/testthat\")'", "");
   if (c.lintr) {
     L.push("lint:", `\tRscript -e 'lintr::lint_dir("${md.scripts}")'`, "");
-    L.push("style:", `\tRscript -e 'styler::style_dir("${md.scripts}")'`, "");
+    L.push("style:", `\tair format ${md.scripts}`, "");
   }
   L.push(
     "# Helpers ----", "",
@@ -1087,6 +1088,14 @@ function genLintr() {
   ].join("\n");
 }
 
+function genAirToml(c) {
+  return [
+    "[format]",
+    `persistent-line-breaks = ${c.airPersistentLineBreaks ? "true" : "false"}`,
+    "",
+  ].join("\n");
+}
+
 function genEditorconfig() {
   return [
     "root = true",
@@ -1116,9 +1125,12 @@ function genPrecommit(c) {
   ];
   if (c.lintr) L.push("      - id: lintr");
   L.push(
-    "      - id: style-files",
     "      - id: no-browser-statement",
     "      - id: parsable-R",
+    "  - repo: https://github.com/posit-dev/air",
+    "    rev: 0.3.0",
+    "    hooks:",
+    "      - id: air-format",
     "  - repo: https://github.com/pre-commit/pre-commit-hooks",
     "    rev: v4.6.0",
     "    hooks:",
@@ -1415,7 +1427,7 @@ function buildFiles(c) {
     f["tests/testthat.R"] = genTestthatRunner();
     f["tests/testthat/test-clean.R"] = genTestthatTest(c);
   }
-  if (c.lintr) { f[".lintr"] = genLintr(); f[".editorconfig"] = genEditorconfig(); }
+  if (c.lintr) { f[".lintr"] = genLintr(); f["air.toml"] = genAirToml(c); f[".editorconfig"] = genEditorconfig(); }
   if (c.precommit) f[".pre-commit-config.yaml"] = genPrecommit(c);
   if (c.citation) f["CITATION.cff"] = genCitation(c);
   if (c.datadict) {
