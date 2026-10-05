@@ -1793,7 +1793,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("#spatial").addEventListener("change", () => { syncSpatialPackages(); refreshPreview(); });
   $("#cfgForm").addEventListener("input", refreshPreview);
-  $("#cfgForm").addEventListener("submit", (e) => { e.preventDefault(); downloadZip(); });
+  $("#cfgForm").addEventListener("submit", (e) => { e.preventDefault(); void downloadZip(); });
   $("#downloadBtn").addEventListener("click", downloadZip);
   $("#resetBtn").addEventListener("click", () => {
     $("#cfgForm").reset();
