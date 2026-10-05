@@ -56,7 +56,7 @@ const PRESETS = {
     numbering: "padded",
     pkgs: ["here", "tidyverse", "vroom", "janitor", "sf", "terra"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
-             useDocker: false, useTestthat: false, useLintr: false,
+             useDocker: false, useTestthat: false, useLintr: false, useAir: false, useUvr: false,
              usePrecommit: false, useCitation: false, useDataDict: true,
              useContributing: false, useZenodo: false, useSessionInfo: true,
              useTargets: true, useDevcontainer: false, useGhTemplates: false },
@@ -67,7 +67,7 @@ const PRESETS = {
     numbering: "padded",
     pkgs: ["here", "tidyverse", "vroom", "janitor", "conflicted"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
-             useDocker: false, useTestthat: true, useLintr: true,
+             useDocker: false, useTestthat: true, useLintr: true, useAir: true, useUvr: false,
              usePrecommit: false, useCitation: false, useDataDict: true,
              useContributing: false, useZenodo: false, useSessionInfo: true,
              useTargets: true, useDevcontainer: false, useGhTemplates: false },
@@ -78,7 +78,7 @@ const PRESETS = {
     numbering: "none",
     pkgs: ["here", "vroom"],
     flags: { useRenv: false, useQuarto: false, useGithub: false, useRprofile: false,
-             useDocker: false, useTestthat: false, useLintr: false,
+             useDocker: false, useTestthat: false, useLintr: false, useAir: false, useUvr: false,
              usePrecommit: false, useCitation: false, useDataDict: false,
              useContributing: false, useZenodo: false, useSessionInfo: false,
              useTargets: false, useDevcontainer: false, useGhTemplates: false },
@@ -89,7 +89,7 @@ const PRESETS = {
     numbering: "padded",
     pkgs: ["here", "tidyverse", "vroom", "janitor", "glue", "fs", "conflicted", "future", "furrr"],
     flags: { useRenv: true, useQuarto: true, useGithub: true, useRprofile: true,
-             useDocker: true, useTestthat: true, useLintr: true,
+             useDocker: true, useTestthat: true, useLintr: true, useAir: true, useUvr: false,
              usePrecommit: true, useCitation: true, useDataDict: true,
              useContributing: true, useZenodo: true, useSessionInfo: true,
              useTargets: true, useDevcontainer: true, useGhTemplates: true },
@@ -207,7 +207,7 @@ function readCustomPackages() {
 const STATE_KEY = "rpt-config-v1";
 const TOGGLE_IDS = [
   "useRenv", "useQuarto", "useGithub", "useRprofile", "useDocker", "useTestthat",
-  "useLintr", "useAirPersistentLineBreaks", "usePrecommit", "useCitation", "useDataDict", "useContributing",
+  "useLintr", "useAir", "useUvr", "useAirPersistentLineBreaks", "usePrecommit", "useCitation", "useDataDict", "useContributing",
   "useZenodo", "useSessionInfo", "useTargets", "useDevcontainer", "useGhTemplates",
 ];
 const FIELD_IDS = [
@@ -295,13 +295,15 @@ function readConfig() {
     runner:    $("#runner").value,
     numbering: $("#numbering").value,
     quartoFmt: $("#quartoFmt").value,
-    renv:    $("#useRenv").checked,
+    uvr:     $("#useUvr").checked,
+    renv:    $("#useRenv").checked && !$("#useUvr").checked,
     quarto:  $("#useQuarto").checked,
     github:  $("#useGithub").checked,
     rprofile:$("#useRprofile").checked,
     docker:  $("#useDocker").checked,
     testthat:$("#useTestthat").checked,
     lintr:   $("#useLintr").checked,
+    air:     $("#useAir").checked,
     airPersistentLineBreaks: $("#useAirPersistentLineBreaks").checked,
     precommit:$("#usePrecommit").checked,
     citation:$("#useCitation").checked,
@@ -541,6 +543,7 @@ function genReadme(c) {
   const tree = buildTree(c, c.slug);
   const badges = [];
   badges.push("![R](https://img.shields.io/badge/R-%E2%89%A5" + c.rver + "-276DC3?logo=r&logoColor=white)");
+  if (c.uvr)    badges.push("![uvr](https://img.shields.io/badge/reproducible-uvr-2C8E5A)");
   if (c.renv)   badges.push("![renv](https://img.shields.io/badge/reproducible-renv-2C8E5A)");
   if (c.targets) badges.push("![targets](https://img.shields.io/badge/pipeline-targets-8b7bff)");
   if (c.docker) badges.push("![Docker](https://img.shields.io/badge/container-Docker-2496ED?logo=docker&logoColor=white)");
@@ -593,6 +596,7 @@ function genReadme(c) {
   }
   L.push("## Requirements", "", `- R >= ${c.rver}`);
   if (c.quarto) L.push("- Quarto >= 1.3");
+  if (c.uvr)    L.push("- `uvr` for package management (`uvr sync` to install packages)");
   if (c.renv)   L.push("- `renv` for package management (`renv::restore()` to install packages)");
   if (c.targets) L.push("- `targets` (+ `tarchetypes` if using Quarto) for the DAG pipeline");
   if (c.docker) L.push("- Docker (optional, for the containerised workflow)");
@@ -620,6 +624,7 @@ function buildTree(c, root) {
   if (c.contributing) { add("├── CONTRIBUTING.md          # how to contribute"); add("├── CODE_OF_CONDUCT.md"); }
   if (c.citation) add("├── CITATION.cff             # how to cite this work");
   if (c.zenodo) add("├── .zenodo.json             # archival metadata for a DOI");
+  if (c.uvr) { add("├── uvr.toml                # uvr manifest"); add("├── uvr.lock                # pinned package versions"); }
   if (c.renv) add("├── renv.lock                # pinned package versions");
   if (c.rprofile) { add("├── .Rprofile                # session defaults / renv autoload"); add("├── .Renviron                # environment variables (template)"); }
   if (useMake(c)) add("├── Makefile                 # run the pipeline with `make`");
@@ -629,7 +634,9 @@ function buildTree(c, root) {
   }
   if (c.docker) add("├── Dockerfile               # pinned rocker image");
   if (c.devcontainer) add("├── .devcontainer/devcontainer.json  # VS Code / Codespaces environment");
-  if (c.lintr) { add("├── .lintr                   # lintr rules"); add("├── air.toml                 # air formatter config"); add("├── .editorconfig            # editor whitespace rules"); }
+  if (c.lintr) add("├── .lintr                   # lintr rules");
+  if (c.air) add("├── air.toml                 # air formatter config");
+  if (c.lintr || c.air) add("├── .editorconfig            # editor whitespace rules");
   if (c.precommit) add("├── .pre-commit-config.yaml  # git pre-commit hooks");
   if (c.github) { add("├── .gitignore"); add("├── .github/workflows/ci.yml # pipeline CI"); }
   if (c.ghTemplates) {
@@ -716,7 +723,7 @@ function genMakefile(c) {
     `# Project: ${c.name}`, `# Author:  ${c.author}`, `# Date:    ${c.date}`,
     "# ====================", "",
     "# Default target — run the full pipeline",
-    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint style" : ""}${c.renv ? " restore snapshot" : ""}${c.sessioninfo ? " session" : ""}${c.targets ? " pipeline" : ""} help`, "",
+    `.PHONY: all clean download clean_data model visualize${c.quarto ? " report" : ""}${c.testthat ? " test" : ""}${c.lintr ? " lint" : ""}${c.air ? " style" : ""}${c.renv || c.uvr ? " restore snapshot" : ""}${c.sessioninfo ? " session" : ""}${c.targets ? " pipeline" : ""} help`, "",
     `all: download clean_data model visualize${c.quarto ? " report" : ""}${c.sessioninfo ? " session" : ""}`, "",
     "# Run individual steps ----", "",
     "download:", `\tRscript -e 'source("${md.scripts}/${mn.dl}")'`, "",
@@ -728,8 +735,8 @@ function genMakefile(c) {
   if (c.testthat) L.push("test:", "\tRscript -e 'testthat::test_dir(\"tests/testthat\")'", "");
   if (c.lintr) {
     L.push("lint:", `\tRscript -e 'lintr::lint_dir("${md.scripts}")'`, "");
-    L.push("style:", `\tair format ${md.scripts}`, "");
   }
+  if (c.air) L.push("style:", `\tair format ${md.scripts}`, "");
   L.push(
     "# Helpers ----", "",
     "# Delete all outputs and cleaned data (raw data is preserved)",
@@ -742,6 +749,10 @@ function genMakefile(c) {
   if (c.renv) {
     L.push("restore:", "\tRscript -e 'renv::restore()'", "");
     L.push("snapshot:", "\tRscript -e 'renv::snapshot()'", "");
+  }
+  if (c.uvr) {
+    L.push("restore:", "\tuvr sync", "");
+    L.push("snapshot:", "\tuvr lock", "");
   }
   if (c.sessioninfo) {
     L.push("session:",
@@ -764,11 +775,15 @@ function genMakefile(c) {
   if (c.testthat) L.push("\t@echo \"    make test         Run testthat tests\"");
   if (c.lintr) {
     L.push("\t@echo \"    make lint         Lint scripts\"");
-    L.push("\t@echo \"    make style        Auto-format scripts\"");
   }
+  if (c.air) L.push("\t@echo \"    make style        Auto-format scripts (air)\"");
   L.push("\t@echo \"    make clean        Delete outputs (raw data preserved)\"");
   if (c.targets) L.push("\t@echo \"    make pipeline     Run the targets DAG (tar_make)\"");
   if (c.sessioninfo) L.push("\t@echo \"    make session      Write session-info.txt\"");
+  if (c.uvr) {
+    L.push("\t@echo \"    make restore      Install locked packages (uvr sync)\"");
+    L.push("\t@echo \"    make snapshot     Update uvr.lock (uvr lock)\"");
+  }
   if (c.renv) {
     L.push("\t@echo \"    make restore      Restore renv packages\"");
     L.push("\t@echo \"    make snapshot     Snapshot renv packages\"");
@@ -935,9 +950,25 @@ function genGitignore(c) {
     `# ${gd.outputs}/figures/*`, `# ${gd.outputs}/tables/*`, "",
     "# renv library (the lockfile is committed; the library is not)",
     "renv/library/", "renv/staging/", "",
+    ...(c.uvr ? ["# uvr library (uvr.toml and uvr.lock are committed; the library is not)", ".uvr/", ""] : []),
     ...(c.targets ? ["# targets pipeline cache (regenerated by tar_make())", "_targets/", "_targets_r/", ""] : []),
   ];
   return L.join("\n");
+}
+
+function genUvrReadme(c) {
+  return [
+    "# uvr", "",
+    "This project uses [uvr](https://github.com/nbafrank/uvr) to manage R and",
+    "package versions. Commit `uvr.toml` and `uvr.lock`; `.uvr/` is ignored.", "",
+    "```bash",
+    "uvr init            # once: creates uvr.toml",
+    "uvr add dplyr       # declare a package",
+    "uvr sync            # install from uvr.lock",
+    "uvr sync --frozen   # CI: fail if the lockfile is stale",
+    "uvr run 02_scripts/script.R",
+    "```", "",
+  ].join("\n");
 }
 
 function genRenvReadme(c) {
@@ -1117,7 +1148,7 @@ function genEditorconfig() {
 function genPrecommit(c) {
   const L = [
     "# See https://lorenzwalthert.github.io/precommit/ for the R hooks.",
-    "# Install once:  R -e 'precommit::use_precommit()'",
+    "# Install once:  uvx pre-commit install   (or: R -e 'precommit::use_precommit()')",
     "repos:",
     "  - repo: https://github.com/lorenzwalthert/precommit",
     "    rev: v0.4.3",
@@ -1211,12 +1242,26 @@ function genCI(c) {
     "        with:",
     "          use-public-rspm: true",
   ];
-  steps.push(
+  if (c.uvr) {
+    steps.push(
+      "      - name: Install uvr",
+      "        run: curl -fsSL https://raw.githubusercontent.com/nbafrank/uvr/main/install.sh | sh",
+      "      - name: Sync packages",
+      "        run: uvr sync --frozen"
+    );
+  } else steps.push(
     c.renv
       ? "      - uses: r-lib/actions/setup-renv@v2"
       : "      - uses: r-lib/actions/setup-r-dependencies@v2"
   );
   if (c.quarto) steps.push("      - uses: quarto-dev/quarto-actions/setup@v2");
+  if (c.air) {
+    steps.push(
+      "      - uses: posit-dev/setup-air@v1",
+      "      - name: Check formatting",
+      `        run: air format --check ${cid.scripts}`
+    );
+  }
   if (c.lintr) {
     steps.push(
       "      - name: Lint",
@@ -1420,6 +1465,7 @@ function buildFiles(c) {
   if (lic) f["LICENSE"] = lic;
   if (useMake(c)) f["Makefile"] = genMakefile(c);
   if (useRunR(c)) f["run.R"] = genRunR(c);
+  if (c.uvr) f["uvr/README.md"] = genUvrReadme(c);
   if (c.renv) f["renv/README.md"] = genRenvReadme(c);
   if (c.rprofile) { f[".Rprofile"] = genRprofile(c); f[".Renviron"] = genRenviron(c); }
   if (c.docker) f["Dockerfile"] = genDockerfile(c);
@@ -1427,7 +1473,9 @@ function buildFiles(c) {
     f["tests/testthat.R"] = genTestthatRunner();
     f["tests/testthat/test-clean.R"] = genTestthatTest(c);
   }
-  if (c.lintr) { f[".lintr"] = genLintr(); f["air.toml"] = genAirToml(c); f[".editorconfig"] = genEditorconfig(); }
+  if (c.lintr) f[".lintr"] = genLintr();
+  if (c.air) f["air.toml"] = genAirToml(c);
+  if (c.lintr || c.air) f[".editorconfig"] = genEditorconfig();
   if (c.precommit) f[".pre-commit-config.yaml"] = genPrecommit(c);
   if (c.citation) f["CITATION.cff"] = genCitation(c);
   if (c.datadict) {

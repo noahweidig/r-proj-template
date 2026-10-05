@@ -226,6 +226,11 @@
               <span class="toggle-label">renv <small>pinned package versions</small></span>
             </label>
             <label class="toggle compact">
+              <input id="useUvr" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">uvr <small>fast R package manager; replaces renv</small></span>
+            </label>
+            <label class="toggle compact">
               <input id="useQuarto" type="checkbox" checked />
               <span class="switch"></span>
               <span class="toggle-label">Quarto report <small>05_report_data.qmd</small></span>
@@ -264,7 +269,12 @@
             <label class="toggle compact">
               <input id="useLintr" type="checkbox" />
               <span class="switch"></span>
-              <span class="toggle-label">Code style <small>.lintr + air + .editorconfig</small></span>
+              <span class="toggle-label">lintr <small>.lintr + .editorconfig</small></span>
+            </label>
+            <label class="toggle compact">
+              <input id="useAir" type="checkbox" />
+              <span class="switch"></span>
+              <span class="toggle-label">air <small>air.toml formatter + CI format check</small></span>
             </label>
             <label class="toggle compact">
               <input id="useAirPersistentLineBreaks" type="checkbox" checked />
@@ -445,6 +455,7 @@
           <tr><td>Pipeline runner</td><td>Makefile, <code>run.R</code>, or both</td></tr>
           <tr><td>targets pipeline</td><td><code>_targets.R</code> DAG with caching — skips unchanged steps</td></tr>
           <tr><td>renv</td><td>Pinned, restorable package versions</td></tr>
+          <tr><td>uvr</td><td><code>uvr.toml</code> + <code>uvr.lock</code> via <code>uvr sync</code>; replaces renv</td></tr>
           <tr><td>Quarto report</td><td>Numbered <code>.qmd</code> report in HTML/PDF/Word</td></tr>
           <tr><td>Git + CI</td><td><code>.gitignore</code> + GitHub Actions pipeline run on every push</td></tr>
           <tr><td>.Rprofile + .Renviron</td><td>Sane session defaults + environment variable template</td></tr>
@@ -456,7 +467,8 @@
           <tr><td>Dockerfile</td><td>Pinned rocker image, spatial system libs when needed</td></tr>
           <tr><td>Dev Container</td><td>One-click VS Code / Codespaces environment</td></tr>
           <tr><td>testthat</td><td><code>tests/</code> skeleton wired into Makefile / CI</td></tr>
-          <tr><td>Code style</td><td><code>.lintr</code> + <code>air.toml</code> + <code>.editorconfig</code></td></tr>
+          <tr><td>lintr</td><td><code>.lintr</code> + <code>.editorconfig</code></td></tr>
+          <tr><td>air</td><td><code>air.toml</code>, <code>make style</code>, CI format check</td></tr>
           <tr><td>pre-commit</td><td>Git hooks that lint &amp; format before every commit</td></tr>
           <tr><td>GitHub templates</td><td>Issue forms, PR template, Dependabot</td></tr>
           <tr><td>CITATION.cff</td><td>Machine-readable citation metadata</td></tr>
